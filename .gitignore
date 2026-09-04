@@ -1,0 +1,30 @@
+﻿# Raíz - bomberos_gral monorepo
+# Backend
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Frontend
+bomberos-frontend/node_modules/
+bomberos-frontend/dist/
+bomberos-frontend/dist-ssr/
+bomberos-frontend/.env
+bomberos-frontend/.env.*
+!bomberos-frontend/.env.example
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.log
+
+# Temp
+.temp
+.tmp
