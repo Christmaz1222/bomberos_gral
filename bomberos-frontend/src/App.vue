@@ -19,9 +19,12 @@
           <RouterLink to="/contactos" class="hover:text-red-600 transition-colors" active-class="text-red-600">Contactos</RouterLink>
           <RouterLink to="/tramites" class="hover:text-red-600 transition-colors" active-class="text-red-600">Trámites</RouterLink>
           <span class="h-4 w-px bg-slate-200"></span>
-          <button class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl normal-case font-semibold tracking-normal transition-all shadow-sm">
-            Ingreso
-          </button>
+          <RouterLink
+              to="/login"
+              class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl normal-case font-semibold tracking-normal transition-all shadow-sm"
+             >
+              Ingreso
+             </RouterLink>
         </nav>
       </div>
     </header>

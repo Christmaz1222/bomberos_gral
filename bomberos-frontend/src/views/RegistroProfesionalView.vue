@@ -7,7 +7,7 @@ import { authService } from '../services/auth.service'
 const route = useRoute()
 const router = useRouter()
 
-const modoVista = ref('registro') 
+const modoVista = ref(route.name === 'Login' ? 'login' : 'registro')
 
 // --- ESTADO DEL FORMULARIO DE REGISTRO ---
 const formularioRegistro = ref({
