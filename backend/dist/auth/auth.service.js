@@ -67,29 +67,24 @@ let AuthService = class AuthService {
         let user = await this.prisma.usuario.findFirst({
             where: { OR: [{ email }, { ci }] }
         });
+        if (user) {
+            throw new common_1.ConflictException('Los datos proporcionados ya están asociados a una cuenta.');
+        }
         const passwordPlana = data.password || 'Bomberos2026*';
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(passwordPlana, salt);
-        if (!user) {
-            user = await this.prisma.usuario.create({
-                data: {
-                    ci,
-                    nombre_completo,
-                    email,
-                    telefono,
-                    departamento,
-                    tipo_persona,
-                    password_hash,
-                    verificado: true,
-                },
-            });
-        }
-        else {
-            await this.prisma.usuario.update({
-                where: { id: user.id },
-                data: { password_hash }
-            });
-        }
+        user = await this.prisma.usuario.create({
+            data: {
+                ci,
+                nombre_completo,
+                email,
+                telefono,
+                departamento,
+                tipo_persona,
+                password_hash,
+                verificado: true,
+            },
+        });
         console.log(`\n========================================`);
         console.log(`[CREDENCIALES ENVIADAS A: ${email}]`);
         console.log(`Contraseña de acceso: ${passwordPlana}`);

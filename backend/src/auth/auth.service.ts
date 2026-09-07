@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -41,31 +46,31 @@ export class AuthService {
       where: { OR: [{ email }, { ci }] }
     });
 
-    // Contraseña fija por defecto si no se especifica otra
-    const passwordPlana = data.password || 'Bomberos2026*';
+    if (user) {
+      throw new ConflictException(
+        'Los datos proporcionados ya están asociados a una cuenta.',
+      );
+    }
 
+    // Se conserva el mecanismo actual de contraseña inicial para no interrumpir
+    // el flujo vigente. En la siguiente fase debe reemplazarse por activación
+    // segura mediante OTP y definición de contraseña por el usuario.
+    const passwordPlana = data.password || 'Bomberos2026*';
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(passwordPlana, salt);
 
-    if (!user) {
-      user = await this.prisma.usuario.create({
-        data: {
-          ci,
-          nombre_completo,
-          email,
-          telefono,
-          departamento,
-          tipo_persona,
-          password_hash,
-          verificado: true,
-        },
-      });
-    } else {
-      await this.prisma.usuario.update({
-        where: { id: user.id },
-        data: { password_hash }
-      });
-    }
+    user = await this.prisma.usuario.create({
+      data: {
+        ci,
+        nombre_completo,
+        email,
+        telefono,
+        departamento,
+        tipo_persona,
+        password_hash,
+        verificado: true,
+      },
+    });
 
     console.log(`\n========================================`);
     console.log(`[CREDENCIALES ENVIADAS A: ${email}]`);

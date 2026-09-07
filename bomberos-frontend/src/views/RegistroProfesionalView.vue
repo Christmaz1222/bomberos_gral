@@ -28,6 +28,9 @@ const formularioLogin = ref({
   password: ''
 })
 
+// Estado para controlar la visibilidad de la contraseña en el login
+const mostrarPassword = ref(false)
+
 const departamentosBolivia = [
   { codigo: 'LP', nombre: 'La Paz' },
   { codigo: 'SC', nombre: 'Santa Cruz' },
@@ -116,6 +119,8 @@ const procesarRegistro = async () => {
     if (respuesta.ok) {
       alert(`¡Registro Exitoso!\nSe han enviado sus credenciales de acceso al correo: ${formularioRegistro.value.correo}.`)
       modoVista.value = 'login' 
+    } else if (respuesta.status === 409) {
+      mostrarModalUsuarioExistente.value = true
     } else {
       alert('Error en el registro: ' + (resultado.message || 'Verifique los datos'))
     }
@@ -127,6 +132,24 @@ const procesarRegistro = async () => {
 
 const mostrarModal2FA = ref(false)
 const codigoOTP = ref('')
+const mostrarModalUsuarioExistente = ref(false)
+const mostrarModalRecuperacion = ref(false)
+
+const irALogin = () => {
+  formularioLogin.value.correo = formularioRegistro.value.correo
+  mostrarModalUsuarioExistente.value = false
+  modoVista.value = 'login'
+  router.push('/login')
+}
+
+const abrirRecuperacion = () => {
+  mostrarModalRecuperacion.value = true
+}
+
+const irAContactos = () => {
+  mostrarModalRecuperacion.value = false
+  router.push('/contactos')
+}
 
 const procesarLogin = async () => {
   try {
@@ -169,10 +192,10 @@ const reenviarCodigo = () => {
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-6 animate-fade-in">
     <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 relative">
       
-      <div class="absolute top-6 right-8">
+      <div class="absolute top-4 right-6">
         <button 
           @click="modoVista = modoVista === 'registro' ? 'login' : 'registro'"
-          class="text-xs font-bold text-red-600 hover:text-red-700 underline cursor-pointer select-none"
+          class="relative p-2 text-xs font-bold text-red-600 hover:text-red-700 no-underline hover:underline cursor-pointer select-none"
         >
           {{ modoVista === 'registro' ? 'Ya tengo cuenta (Ingresar)' : 'No tengo cuenta (Registrarme)' }}
         </button>
@@ -316,13 +339,32 @@ const reenviarCodigo = () => {
 
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contraseña de Acceso</label>
-            <input 
-              v-model="formularioLogin.password" 
-              type="password" 
-              required 
-              placeholder="••••••••" 
-              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" 
-            />
+            <div class="relative">
+              <input 
+                v-model="formularioLogin.password" 
+                :type="mostrarPassword ? 'text' : 'password'" 
+                required 
+                autocomplete="current-password"
+                placeholder="••••••••" 
+                class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" 
+              />
+              <button 
+                type="button"
+                @click="mostrarPassword = !mostrarPassword"
+                :aria-label="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 rounded-md p-1 cursor-pointer transition-colors"
+              >
+                <!-- Icono de Ojo (Mostrar) cuando está oculto -->
+                <svg v-if="!mostrarPassword" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <!-- Icono de Ojo Tachado (Ocultar) cuando está visible -->
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.07 10.07 0 014.136-5.4M9.88 9.88l-3.53-3.53m6.18 6.18l3.53 3.53M3 3l18 18" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <button 
@@ -334,6 +376,16 @@ const reenviarCodigo = () => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </button>
+
+          <div class="text-center -mt-1">
+            <button
+              type="button"
+              @click="abrirRecuperacion"
+              class="text-xs font-medium text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+            >
+              ¿Olvidaste tu contraseña? 
+            </button>
+          </div>
         </form>
       </div>
 
@@ -384,6 +436,38 @@ const reenviarCodigo = () => {
             </p>
           </div>
 
+        </div>
+      </div>
+
+      <div v-if="mostrarModalUsuarioExistente" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200/80 p-6 text-center animate-scale-up">
+          <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Usuario ya registrado</h3>
+          <p class="text-sm text-slate-500 mt-2 leading-relaxed">
+            Los datos proporcionados ya están asociados a una cuenta. Puede iniciar sesión con sus credenciales.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+            <button @click="mostrarModalUsuarioExistente = false" type="button" class="flex-1 border border-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl hover:bg-slate-50 transition-colors">Cerrar</button>
+            <button @click="irALogin" type="button" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">Ir a iniciar sesión</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="mostrarModalRecuperacion" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200/80 p-6 text-center animate-scale-up">
+          <div class="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9a4 4 0 100-8 4 4 0 000 8zm0 2c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z" /></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Recuperación de contraseña</h3>
+          <p class="text-sm text-slate-500 mt-2 leading-relaxed">
+            La recuperación automática está en desarrollo. Por ahora, comuníquese con soporte técnico mediante los canales oficiales.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+            <button @click="mostrarModalRecuperacion = false" type="button" class="flex-1 border border-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl hover:bg-slate-50 transition-colors">Cerrar</button>
+            <button @click="irAContactos" type="button" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">Ver contactos</button>
+          </div>
         </div>
       </div>
   </div>
