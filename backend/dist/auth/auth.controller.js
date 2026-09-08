@@ -15,22 +15,36 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
+const dto_1 = require("./dto");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
         this.authService = authService;
     }
-    async register(body) {
-        return this.authService.register(body);
-    }
-    async login(body) {
-        return this.authService.login(body);
+    async register(registerDto) {
+        console.log(`📝 New registration: ${registerDto.email}`);
+        return this.authService.register(registerDto);
     }
     async forgotPassword(body) {
-        return this.authService.forgotPassword(body);
+        console.log(`🔑 Forgot password: ${body.email}`);
+        return this.authService.forgotPassword({ email: body.email });
     }
     async resetPassword(body) {
-        return this.authService.resetPassword(body);
+        console.log(`🔄 Reset password`);
+        const nuevaPassword = body.nuevaPassword || body.newPassword;
+        return this.authService.resetPassword({ token: body.token, nuevaPassword });
+    }
+    async login(loginDto) {
+        const email = loginDto.email || loginDto.correo;
+        console.log(`📥 Login intent: ${email}`);
+        return this.authService.login({ email, password: loginDto.password });
+    }
+    async verifyOtp(verifyOtpDto) {
+        console.log(`✅ Verify OTP: ${verifyOtpDto.email}`);
+        return this.authService.verifyOtp({
+            email: verifyOtpDto.email,
+            codigo: verifyOtpDto.codigo,
+        });
     }
 };
 exports.AuthController = AuthController;
@@ -39,19 +53,12 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [dto_1.RegisterDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
-    (0, common_1.Post)('login'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "login", null);
-__decorate([
     (0, common_1.Post)('forgot-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -59,11 +66,28 @@ __decorate([
 ], AuthController.prototype, "forgotPassword", null);
 __decorate([
     (0, common_1.Post)('reset-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resetPassword", null);
+__decorate([
+    (0, common_1.Post)('login'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dto_1.LoginDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('verify-otp'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dto_1.VerifyOtpDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyOtp", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

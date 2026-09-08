@@ -1,18 +1,17 @@
-import {
-  Injectable,
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { OtpService } from './otp.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private otpService: OtpService,
+    private emailService: EmailService,
   ) {}
 
   // 1. Registro Inicial: Crea el usuario con una contraseña fija (o la que se le asigne)
@@ -46,31 +45,31 @@ export class AuthService {
       where: { OR: [{ email }, { ci }] }
     });
 
-    if (user) {
-      throw new ConflictException(
-        'Los datos proporcionados ya están asociados a una cuenta.',
-      );
-    }
-
-    // Se conserva el mecanismo actual de contraseña inicial para no interrumpir
-    // el flujo vigente. En la siguiente fase debe reemplazarse por activación
-    // segura mediante OTP y definición de contraseña por el usuario.
+    // Contraseña fija por defecto si no se especifica otra
     const passwordPlana = data.password || 'Bomberos2026*';
+
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(passwordPlana, salt);
 
-    user = await this.prisma.usuario.create({
-      data: {
-        ci,
-        nombre_completo,
-        email,
-        telefono,
-        departamento,
-        tipo_persona,
-        password_hash,
-        verificado: true,
-      },
-    });
+    if (!user) {
+      user = await this.prisma.usuario.create({
+        data: {
+          ci,
+          nombre_completo,
+          email,
+          telefono,
+          departamento,
+          tipo_persona,
+          password_hash,
+          verificado: true,
+        },
+      });
+    } else {
+      await this.prisma.usuario.update({
+        where: { id: user.id },
+        data: { password_hash }
+      });
+    }
 
     console.log(`\n========================================`);
     console.log(`[CREDENCIALES ENVIADAS A: ${email}]`);
@@ -83,34 +82,91 @@ export class AuthService {
     };
   }
 
-  // 2. Inicio de sesión con contraseña fija
+  // 2. Inicio de sesión - genera OTP y envía por email
   async login(data: { email?: string; correo?: string; password: string }) {
-    const userEmail = data.email || data.correo;
+    const email = data.email || data.correo;
 
-    if (!userEmail) {
+    if (!email) {
       throw new UnauthorizedException('El correo electrónico es obligatorio');
     }
 
-    const user = await this.prisma.usuario.findUnique({
-      where: { email: userEmail },
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { email },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Credenciales incorrectas');
+    if (!usuario) {
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, user.password_hash);
+    if (usuario.activo === false) {
+      throw new UnauthorizedException('Usuario inactivo');
+    }
+
+    const isPasswordValid = await bcrypt.compare(data.password, usuario.password_hash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Contraseña incorrecta');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const codigoOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`[CÓDIGO OTP 2FA PARA ${userEmail}]: ${codigoOTP}`);
+    const { otp, codigo } = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+
+    try {
+      await this.emailService.sendOTP(email, otp);
+    } catch (e) {
+      console.warn(`⚠️ No se pudo enviar email a ${email}:`, (e as Error).message);
+    }
+
+    console.log(`🔐 OTP para ${email}: ${otp} (expira en 10 min)`);
+    console.log(`📝 ID del código: ${codigo.id}`);
 
     return {
-      message: 'Contraseña validada. Ingrese el código OTP enviado a su correo.',
       requiereOtp: true,
-      email: user.email
+      email: usuario.email,
+      userId: usuario.id,
+      message: 'Código de verificación enviado a tu email',
+    };
+  }
+
+  // 2b. Verificación OTP - valida código y emite JWT
+  async verifyOtp(data: { email: string; codigo: string }) {
+    const { email, codigo } = data;
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { email },
+      select: { id: true, email: true, nombre_completo: true, ci: true, tipo_persona: true },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    await this.otpService.validateAndUseCode(usuario.id, codigo, 'LOGIN_2FA');
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { ultimo_acceso: new Date() },
+    });
+
+    const payload = {
+      sub: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre_completo,
+      ci: usuario.ci,
+      tipo_persona: usuario.tipo_persona,
+      role: 'EXTERNO',
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      token,
+      user: {
+        id: usuario.id,
+        email: usuario.email,
+        nombre: usuario.nombre_completo,
+        ci: usuario.ci,
+        tipo_persona: usuario.tipo_persona,
+        role: 'EXTERNO',
+      },
     };
   }
   // 3. Solicitar recuperación de contraseña ("Olvidé mi contraseña")

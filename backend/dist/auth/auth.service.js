@@ -47,12 +47,18 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const prisma_service_1 = require("../prisma/prisma.service");
 const bcrypt = __importStar(require("bcrypt"));
+const otp_service_1 = require("./otp.service");
+const email_service_1 = require("../email/email.service");
 let AuthService = class AuthService {
     prisma;
     jwtService;
-    constructor(prisma, jwtService) {
+    otpService;
+    emailService;
+    constructor(prisma, jwtService, otpService, emailService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
+        this.otpService = otpService;
+        this.emailService = emailService;
     }
     async register(data) {
         const ci = data.cedula || data.ci || '';
@@ -67,24 +73,29 @@ let AuthService = class AuthService {
         let user = await this.prisma.usuario.findFirst({
             where: { OR: [{ email }, { ci }] }
         });
-        if (user) {
-            throw new common_1.ConflictException('Los datos proporcionados ya están asociados a una cuenta.');
-        }
         const passwordPlana = data.password || 'Bomberos2026*';
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(passwordPlana, salt);
-        user = await this.prisma.usuario.create({
-            data: {
-                ci,
-                nombre_completo,
-                email,
-                telefono,
-                departamento,
-                tipo_persona,
-                password_hash,
-                verificado: true,
-            },
-        });
+        if (!user) {
+            user = await this.prisma.usuario.create({
+                data: {
+                    ci,
+                    nombre_completo,
+                    email,
+                    telefono,
+                    departamento,
+                    tipo_persona,
+                    password_hash,
+                    verificado: true,
+                },
+            });
+        }
+        else {
+            await this.prisma.usuario.update({
+                where: { id: user.id },
+                data: { password_hash }
+            });
+        }
         console.log(`\n========================================`);
         console.log(`[CREDENCIALES ENVIADAS A: ${email}]`);
         console.log(`Contraseña de acceso: ${passwordPlana}`);
@@ -95,26 +106,72 @@ let AuthService = class AuthService {
         };
     }
     async login(data) {
-        const userEmail = data.email || data.correo;
-        if (!userEmail) {
+        const email = data.email || data.correo;
+        if (!email) {
             throw new common_1.UnauthorizedException('El correo electrónico es obligatorio');
         }
-        const user = await this.prisma.usuario.findUnique({
-            where: { email: userEmail },
+        const usuario = await this.prisma.usuario.findUnique({
+            where: { email },
         });
-        if (!user) {
-            throw new common_1.UnauthorizedException('Credenciales incorrectas');
+        if (!usuario) {
+            throw new common_1.UnauthorizedException('Credenciales inválidas');
         }
-        const isPasswordValid = await bcrypt.compare(data.password, user.password_hash);
+        if (usuario.activo === false) {
+            throw new common_1.UnauthorizedException('Usuario inactivo');
+        }
+        const isPasswordValid = await bcrypt.compare(data.password, usuario.password_hash);
         if (!isPasswordValid) {
-            throw new common_1.UnauthorizedException('Contraseña incorrecta');
+            throw new common_1.UnauthorizedException('Credenciales inválidas');
         }
-        const codigoOTP = Math.floor(100000 + Math.random() * 900000).toString();
-        console.log(`[CÓDIGO OTP 2FA PARA ${userEmail}]: ${codigoOTP}`);
+        const { otp, codigo } = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+        try {
+            await this.emailService.sendOTP(email, otp);
+        }
+        catch (e) {
+            console.warn(`⚠️ No se pudo enviar email a ${email}:`, e.message);
+        }
+        console.log(`🔐 OTP para ${email}: ${otp} (expira en 10 min)`);
+        console.log(`📝 ID del código: ${codigo.id}`);
         return {
-            message: 'Contraseña validada. Ingrese el código OTP enviado a su correo.',
             requiereOtp: true,
-            email: user.email
+            email: usuario.email,
+            userId: usuario.id,
+            message: 'Código de verificación enviado a tu email',
+        };
+    }
+    async verifyOtp(data) {
+        const { email, codigo } = data;
+        const usuario = await this.prisma.usuario.findUnique({
+            where: { email },
+            select: { id: true, email: true, nombre_completo: true, ci: true, tipo_persona: true },
+        });
+        if (!usuario) {
+            throw new common_1.UnauthorizedException('Usuario no encontrado');
+        }
+        await this.otpService.validateAndUseCode(usuario.id, codigo, 'LOGIN_2FA');
+        await this.prisma.usuario.update({
+            where: { id: usuario.id },
+            data: { ultimo_acceso: new Date() },
+        });
+        const payload = {
+            sub: usuario.id,
+            email: usuario.email,
+            nombre: usuario.nombre_completo,
+            ci: usuario.ci,
+            tipo_persona: usuario.tipo_persona,
+            role: 'EXTERNO',
+        };
+        const token = this.jwtService.sign(payload);
+        return {
+            token,
+            user: {
+                id: usuario.id,
+                email: usuario.email,
+                nombre: usuario.nombre_completo,
+                ci: usuario.ci,
+                tipo_persona: usuario.tipo_persona,
+                role: 'EXTERNO',
+            },
         };
     }
     async forgotPassword(data) {
@@ -157,6 +214,8 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        otp_service_1.OtpService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

@@ -1,9 +1,13 @@
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { OtpService } from './otp.service';
+import { EmailService } from '../email/email.service';
 export declare class AuthService {
     private prisma;
     private jwtService;
-    constructor(prisma: PrismaService, jwtService: JwtService);
+    private otpService;
+    private emailService;
+    constructor(prisma: PrismaService, jwtService: JwtService, otpService: OtpService, emailService: EmailService);
     register(data: {
         cedula?: string;
         ci?: string;
@@ -27,9 +31,24 @@ export declare class AuthService {
         correo?: string;
         password: string;
     }): Promise<{
-        message: string;
         requiereOtp: boolean;
         email: string;
+        userId: number;
+        message: string;
+    }>;
+    verifyOtp(data: {
+        email: string;
+        codigo: string;
+    }): Promise<{
+        token: string;
+        user: {
+            id: number;
+            email: string;
+            nombre: string;
+            ci: string;
+            tipo_persona: string;
+            role: string;
+        };
     }>;
     forgotPassword(data: {
         email: string;

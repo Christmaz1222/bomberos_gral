@@ -12,6 +12,9 @@ const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
 const auth_service_1 = require("./auth.service");
 const auth_controller_1 = require("./auth.controller");
+const otp_service_1 = require("./otp.service");
+const email_module_1 = require("../email/email.module");
+const prisma_module_1 = require("../prisma/prisma.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -19,13 +22,18 @@ exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
             passport_1.PassportModule,
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'mi_super_secreto',
-                signOptions: { expiresIn: '7d' },
+            email_module_1.EmailModule,
+            prisma_module_1.PrismaModule,
+            jwt_1.JwtModule.registerAsync({
+                useFactory: () => ({
+                    secret: process.env.JWT_SECRET,
+                    signOptions: { expiresIn: '7d' },
+                }),
             }),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService],
+        providers: [auth_service_1.AuthService, otp_service_1.OtpService],
+        exports: [auth_service_1.AuthService, jwt_1.JwtModule],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

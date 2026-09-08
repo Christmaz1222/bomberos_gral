@@ -1,25 +1,11 @@
 import { AuthService } from './auth.service';
+import { LoginDto, VerifyOtpDto, RegisterDto } from './dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    register(body: {
-        ci: string;
-        nombre_completo: string;
-        email: string;
-        telefono: string;
-        password: string;
-        tipo_persona: string;
-    }): Promise<{
+    register(registerDto: RegisterDto): Promise<{
         message: string;
         correo: string;
-    }>;
-    login(body: {
-        email: string;
-        password: string;
-    }): Promise<{
-        message: string;
-        requiereOtp: boolean;
-        email: string;
     }>;
     forgotPassword(body: {
         email: string;
@@ -28,8 +14,26 @@ export declare class AuthController {
     }>;
     resetPassword(body: {
         token: string;
-        nuevaPassword: string;
+        newPassword: string;
+        nuevaPassword?: string;
     }): Promise<{
         message: string;
+    }>;
+    login(loginDto: LoginDto): Promise<{
+        requiereOtp: boolean;
+        email: string;
+        userId: number;
+        message: string;
+    }>;
+    verifyOtp(verifyOtpDto: VerifyOtpDto): Promise<{
+        token: string;
+        user: {
+            id: number;
+            email: string;
+            nombre: string;
+            ci: string;
+            tipo_persona: string;
+            role: string;
+        };
     }>;
 }

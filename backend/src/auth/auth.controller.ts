@@ -1,37 +1,57 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginDto, VerifyOtpDto, RegisterDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // ============================================
+  // ENDPOINTS EXISTENTES - MANTENER
+  // ============================================
+
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() body: {
-    ci: string;
-    nombre_completo: string;
-    email: string;
-    telefono: string;
-    password: string;
-    tipo_persona: string;
-  }) {
-    return this.authService.register(body);
+  async register(@Body() registerDto: RegisterDto) {
+    console.log(`📝 New registration: ${registerDto.email}`);
+    return this.authService.register(registerDto);
   }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: { email: string }) {
+    console.log(`🔑 Forgot password: ${body.email}`);
+    return this.authService.forgotPassword({ email: body.email });
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: { token: string; newPassword: string; nuevaPassword?: string }) {
+    console.log(`🔄 Reset password`);
+    // Soporte para newPassword (frontend) y nuevaPassword (service)
+    const nuevaPassword = body.nuevaPassword || body.newPassword;
+    return this.authService.resetPassword({ token: body.token, nuevaPassword });
+  }
+
+  // ============================================
+  // NUEVOS ENDPOINTS - AGREGAR
+  // ============================================
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() body: { email: string; password: string }) {
-    return this.authService.login(body);
+  async login(@Body() loginDto: LoginDto) {
+    const email = loginDto.email || loginDto.correo;
+    console.log(`📥 Login intent: ${email}`);
+    return this.authService.login({ email, password: loginDto.password });
   }
-  //este codigo es para la opcion de olvido su contraseña?
-  @Post('forgot-password')
-async forgotPassword(@Body() body: { email: string }) {
-  return this.authService.forgotPassword(body);
-}
 
-@Post('reset-password')
-async resetPassword(@Body() body: { token: string; nuevaPassword: string }) {
-  return this.authService.resetPassword(body);
-}
-//es hasta qui
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    console.log(`✅ Verify OTP: ${verifyOtpDto.email}`);
+    return this.authService.verifyOtp({
+      email: verifyOtpDto.email,
+      codigo: verifyOtpDto.codigo,
+    });
+  }
 }
