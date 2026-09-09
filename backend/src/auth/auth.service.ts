@@ -126,6 +126,35 @@ export class AuthService {
     };
   }
 
+  // 2b. Reenvío OTP - genera nuevo código para el usuario
+  async resendOtp(data: { email?: string; correo?: string }) {
+    const email = data.email || data.correo;
+    if (!email) {
+      throw new BadRequestException('El correo electrónico es obligatorio');
+    }
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { email },
+    });
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+    if (usuario.activo === false) {
+      throw new UnauthorizedException('Usuario inactivo');
+    }
+    const { otp, codigo } = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+    try {
+      await this.emailService.sendOTP(email, otp);
+    } catch (e) {
+      console.warn(`⚠️ No se pudo enviar email a ${email}:`, (e as Error).message);
+    }
+    console.log(`🔐 [RESEND] OTP para ${email}: ${otp} (expira en 10 min)`);
+    console.log(`📝 ID del código: ${codigo.id}`);
+    return {
+      message: 'Nuevo código de verificación enviado a tu email',
+      email: usuario.email,
+    };
+  }
+
   // 2b. Verificación OTP - valida código y emite JWT
   async verifyOtp(data: { email: string; codigo: string }) {
     const { email, codigo } = data;

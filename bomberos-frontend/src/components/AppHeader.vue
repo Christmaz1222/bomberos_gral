@@ -22,9 +22,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { authService } from '../services/auth.service';
 
-// Estos datos deberían venir de tu store de Pinia (authStore)
-const userName = ref('Capitán Juan Pérez'); 
+const router = useRouter();
+const userName = ref('Usuario'); 
 const currentDate = ref('');
 
 onMounted(() => {
@@ -32,10 +34,20 @@ onMounted(() => {
   currentDate.value = date.toLocaleDateString('es-ES', { 
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
   });
+  // Cargar nombre real desde authService (userRole/JWT)
+  const user = authService.getUser();
+  if (user?.nombre) {
+    userName.value = user.nombre;
+  } else if (user?.email) {
+    userName.value = user.email;
+  } else {
+    const role = authService.getUserRole();
+    if (role) userName.value = role === 'EXTERNO' ? 'Usuario Externo' : role;
+  }
 });
 
 const handleLogout = () => {
-  // Lógica para cerrar sesión
-  console.log('Cerrando sesión...');
+  authService.logout();
+  router.push('/login');
 };
 </script>

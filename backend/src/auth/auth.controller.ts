@@ -1,6 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, VerifyOtpDto, RegisterDto } from './dto';
+import { LoginDto, VerifyOtpDto, RegisterDto, ResendOtpDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
@@ -53,5 +53,13 @@ export class AuthController {
       email: verifyOtpDto.email,
       codigo: verifyOtpDto.codigo,
     });
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  async resendOtp(@Body() resendOtpDto: ResendOtpDto) {
+    const email = resendOtpDto.email || resendOtpDto.correo;
+    console.log(`🔄 Resend OTP: ${email}`);
+    return this.authService.resendOtp({ email });
   }
 }

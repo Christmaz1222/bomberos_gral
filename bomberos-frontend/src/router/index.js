@@ -30,6 +30,64 @@ import AlasdeltaView from '../views/admin/AlasdeltaView.vue'
 import { authService } from '../services/auth.service.js'
 
 // ==========================================
+// HELPERS JWT - Validación y Roles (FASE 2)
+// ==========================================
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return null
+  }
+}
+
+function isTokenValid() {
+  const token = localStorage.getItem('token')
+  if (!token) return false
+  // Compatibilidad con token mock antiguo "token-otp-verificado" -> inválido, forzar re-login
+  if (token === 'token-otp-verificado') return false
+  const payload = parseJwt(token)
+  if (!payload) return false
+  // Si tiene exp, verificar expiración
+  if (payload.exp && Date.now() >= payload.exp * 1000) {
+    return false
+  }
+  return true
+}
+
+function getUserRole() {
+  // Prioridad: localStorage userRole -> payload JWT -> user objeto
+  const storedRole = localStorage.getItem('userRole')
+  if (storedRole) return storedRole
+  const token = localStorage.getItem('token')
+  if (token) {
+    const payload = parseJwt(token)
+    if (payload) return payload.role || payload.tipo_persona || null
+  }
+  try {
+    const raw = localStorage.getItem('user')
+    if (raw) {
+      const user = JSON.parse(raw)
+      return user.role || user.tipo_persona || null
+    }
+  } catch {}
+  return null
+}
+
+function clearSession() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('userRole')
+}
+
+// ==========================================
 // DEFINICIÓN DE RUTAS
 // ==========================================
 const routes = [
@@ -51,72 +109,72 @@ const routes = [
   { path: '/login', name: 'Login', component: RegistroProfesionalView, meta: { public: true, requiresGuest: true } },
   { path: '/register', name: 'Register', component: RegistroProfesionalView, meta: { public: true, requiresGuest: true } },
 
-  // --- RUTAS ADMIN (PRIVADAS) ---
+  // --- RUTAS ADMIN (PRIVADAS con roles) ---
   { 
     path: '/admin/dashboard', 
     name: 'dashboard', 
     component: () => import('../views/DashboardView.vue'), 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['INTERNO', 'ADMIN', 'EXTERNO'] } 
   },
   { 
     path: '/admin/formularios', 
     name: 'admin-formularios', 
     component: FormulariosView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/capacitacion-pj', 
     name: 'capacitacion', 
     component: CapacitacionView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/certificacion-pn', 
     name: 'certificacion-pn', 
     component: RegsiipciNaturalView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/certificacion-pj', 
     name: 'certificacion-pj', 
     component: RegsiipciJuridicoView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/declaracion-jurada', 
     name: 'declaracion-jurada', 
     component: DeclaracionView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/profesionales-pn', 
     name: 'profesionales-pn', 
     component: RegprofnaturalView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/profesionales-pj', 
     name: 'profesionales-pj', 
     component: RegprofnatujurView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/buscar-empresa', 
     name: 'buscar-empresa', 
     component: BuscadorcodigoView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/renovaciones-pn', 
     name: 'renovaciones-pn', 
     component: RenovacionesView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
   { 
     path: '/admin/alas-delta', 
     name: 'alas-delta', 
     component: AlasdeltaView, 
-    meta: { requiresAuth: true } 
+    meta: { requiresAuth: true, roles: ['EXTERNO', 'INTERNO', 'ADMIN'] } 
   },
 ]
 
@@ -129,23 +187,44 @@ const router = createRouter({
 })
 
 // ==========================================
-// GUARD DE NAVEGACIÓN
+// GUARD DE NAVEGACIÓN FORTALECIDO (FASE 2)
 // ==========================================
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = authService.isAuthenticated()
+  const tokenExists = !!localStorage.getItem('token')
+  const isAuthenticated = isTokenValid()
+  const userRole = getUserRole()
 
-  // Si la ruta requiere autenticación y no está autenticado
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } 
-  // Si la ruta es solo para invitados (login/register) y ya está autenticado
-  else if (to.meta.requiresGuest && isAuthenticated) {
-    next('/admin/dashboard')
-  } 
-  // Si la ruta es pública (no requiere auth) y no está autenticado
-  else {
-    next()
+  // Si hay token pero está expirado/inválido -> limpiar sesión
+  if (tokenExists && !isAuthenticated) {
+    clearSession()
   }
+
+  // Si la ruta requiere autenticación y no está autenticado / token inválido o expirado
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return next('/login')
+  }
+
+  // Verificación de roles en rutas /admin/* si está autenticado
+  if (to.meta.requiresAuth && to.meta.roles && isAuthenticated) {
+    if (userRole && !to.meta.roles.includes(userRole)) {
+      // Rol no autorizado -> redirigir según rol
+      if (userRole === 'INTERNO' || userRole === 'ADMIN') {
+        return next('/admin/dashboard')
+      }
+      return next('/admin/formularios')
+    }
+  }
+
+  // Si la ruta es solo para invitados (login/register) y ya está autenticado
+  if (to.meta.requiresGuest && isAuthenticated) {
+    // Redirigir según rol: EXTERNO -> formularios, INTERNO/ADMIN -> dashboard
+    if (userRole === 'INTERNO' || userRole === 'ADMIN') {
+      return next('/admin/dashboard')
+    }
+    return next('/admin/formularios')
+  }
+
+  next()
 })
 
 export default router
