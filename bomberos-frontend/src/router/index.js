@@ -11,6 +11,13 @@ import TramitesView from '../views/TramitesView.vue'
 import RegistroProfesionalView from '../views/RegistroProfesionalView.vue'
 
 // ==========================================
+// IMPORTAR VISTAS KERVEROS (FASE KERVEROS)
+// ==========================================
+import KerverosLoginView from '../views/KerverosLoginView.vue'
+import KerverosDashboardView from '../views/KerverosDashboardView.vue'
+import KerverosCallbackView from '../views/KerverosCallbackView.vue'
+
+// ==========================================
 // IMPORTAR VISTAS ADMIN
 // ==========================================
 import FormulariosView from '../views/admin/FormulariosView.vue'
@@ -108,6 +115,26 @@ const routes = [
   // --- RUTAS DE AUTENTICACIÓN (Apuntando a la vista unificada) ---
   { path: '/login', name: 'Login', component: RegistroProfesionalView, meta: { public: true, requiresGuest: true } },
   { path: '/register', name: 'Register', component: RegistroProfesionalView, meta: { public: true, requiresGuest: true } },
+
+  // --- RUTAS KERVEROS (FASE KERVEROS - Usuario Interno Policía) ---
+  { 
+    path: '/auth/kerveros', 
+    name: 'kerveros-login', 
+    component: KerverosLoginView, 
+    meta: { public: true, requiresGuest: true } 
+  },
+  { 
+    path: '/auth/kerveros/dashboard', 
+    name: 'kerveros-dashboard', 
+    component: KerverosDashboardView, 
+    meta: { public: true, requiresGuest: true } 
+  },
+  { 
+    path: '/auth/kerveros/callback', 
+    name: 'kerveros-callback', 
+    component: KerverosCallbackView, 
+    meta: { public: true, requiresGuest: true } 
+  },
 
   // --- RUTAS ADMIN (PRIVADAS con roles) ---
   { 

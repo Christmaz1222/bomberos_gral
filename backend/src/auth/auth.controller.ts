@@ -1,6 +1,6 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, VerifyOtpDto, RegisterDto, ResendOtpDto } from './dto';
+import { LoginDto, VerifyOtpDto, RegisterDto, ResendOtpDto, KerverosExchangeDto } from './dto';
 
 @Controller('auth')
 export class AuthController {
@@ -61,5 +61,50 @@ export class AuthController {
     const email = resendOtpDto.email || resendOtpDto.correo;
     console.log(`🔄 Resend OTP: ${email}`);
     return this.authService.resendOtp({ email });
+  }
+
+  // ============================================
+  // KERVEROS ENDPOINTS
+  // ============================================
+
+  @Post('kerveros/exchange')
+  @HttpCode(HttpStatus.OK)
+  async exchangeKerverosToken(@Body() dto: KerverosExchangeDto) {
+    console.log(`🔐 Kerveros exchange attempt`);
+    try {
+      return await this.authService.exchangeKerverosToken(dto.token);
+    } catch (error) {
+      console.error(`❌ Kerveros exchange failed:`, (error as Error).message);
+      throw error;
+    }
+  }
+
+  @Get('kerveros/callback')
+  async kerverosCallback(@Query('token') token: string) {
+    console.log(`🔐 Kerveros callback received`);
+    if (!token) {
+      return {
+        success: false,
+        message: 'Token de Kerveros no proporcionado',
+        redirectUrl: '/login?error=kerveros_token_missing',
+      };
+    }
+    try {
+      const result = await this.authService.exchangeKerverosToken(token);
+      // Devolver datos formateados para frontend con redirect
+      return {
+        success: true,
+        token: result.token,
+        user: result.user,
+        redirectUrl: '/admin/dashboard',
+      };
+    } catch (error) {
+      console.error(`❌ Kerveros callback failed:`, (error as Error).message);
+      return {
+        success: false,
+        message: (error as Error).message || 'Error al procesar token de Kerveros',
+        redirectUrl: '/login?error=kerveros_invalid',
+      };
+    }
   }
 }

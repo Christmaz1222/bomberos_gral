@@ -31,6 +31,9 @@ model Usuario {
   activo          Boolean  @default(true)
   verificado      Boolean  @default(false)
   ultimo_acceso   DateTime?
+  role            String?  @default("EXTERNO") @db.VarChar(20)
+  grado           String?  @db.VarChar(50)
+  unidad          String?  @db.VarChar(100)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 

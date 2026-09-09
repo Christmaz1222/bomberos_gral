@@ -8,6 +8,20 @@ export declare class AuthService {
     private otpService;
     private emailService;
     constructor(prisma: PrismaService, jwtService: JwtService, otpService: OtpService, emailService: EmailService);
+    exchangeKerverosToken(kerverosToken: string): Promise<{
+        token: string;
+        user: {
+            id: number;
+            email: string;
+            nombre: string;
+            ci: string;
+            tipo_persona: string;
+            role: string;
+            grado: string | null;
+            unidad: string | null;
+        };
+    }>;
+    private validateKerverosToken;
     register(data: {
         cedula?: string;
         ci?: string;
@@ -35,6 +49,13 @@ export declare class AuthService {
         email: string;
         userId: number;
         message: string;
+    }>;
+    resendOtp(data: {
+        email?: string;
+        correo?: string;
+    }): Promise<{
+        message: string;
+        email: string;
     }>;
     verifyOtp(data: {
         email: string;

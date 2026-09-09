@@ -60,6 +60,102 @@ let AuthService = class AuthService {
         this.otpService = otpService;
         this.emailService = emailService;
     }
+    async exchangeKerverosToken(kerverosToken) {
+        const kerverosPayload = await this.validateKerverosToken(kerverosToken);
+        const { ci, nombre, grado, unidad, email } = kerverosPayload;
+        if (!ci || !email) {
+            throw new common_1.BadRequestException('Token de Kerveros inválido: faltan datos obligatorios (ci, email)');
+        }
+        let usuario = await this.prisma.usuario.findFirst({
+            where: { OR: [{ ci }, { email }] },
+        });
+        const datosActualizados = {
+            nombre_completo: nombre,
+            email,
+            ci,
+            grado: grado || null,
+            unidad: unidad || null,
+            tipo_persona: 'INTERNO',
+            verificado: true,
+            activo: true,
+            ultimo_acceso: new Date(),
+        };
+        if (!usuario) {
+            const salt = await bcrypt.genSalt(10);
+            const password_hash = await bcrypt.hash(`Kerveros_${Date.now()}_${Math.random().toString(36).slice(2)}`, salt);
+            usuario = await this.prisma.usuario.create({
+                data: {
+                    ...datosActualizados,
+                    password_hash,
+                    telefono: '',
+                    departamento: unidad || '',
+                },
+            });
+            console.log(`✅ Usuario INTERNO creado desde Kerveros: ${email} (CI: ${ci})`);
+        }
+        else {
+            await this.prisma.usuario.update({
+                where: { id: usuario.id },
+                data: datosActualizados,
+            });
+            console.log(`🔄 Usuario INTERNO actualizado desde Kerveros: ${email} (CI: ${ci})`);
+        }
+        const payload = {
+            sub: usuario.id,
+            email: usuario.email,
+            nombre: usuario.nombre_completo,
+            ci: usuario.ci,
+            tipo_persona: usuario.tipo_persona,
+            role: 'INTERNO',
+            grado: usuario.grado,
+            unidad: usuario.unidad,
+        };
+        const token = this.jwtService.sign(payload);
+        return {
+            token,
+            user: {
+                id: usuario.id,
+                email: usuario.email,
+                nombre: usuario.nombre_completo,
+                ci: usuario.ci,
+                tipo_persona: usuario.tipo_persona,
+                role: 'INTERNO',
+                grado: usuario.grado,
+                unidad: usuario.unidad,
+            },
+        };
+    }
+    async validateKerverosToken(token) {
+        try {
+            const payload = this.jwtService.decode(token);
+            if (!payload) {
+                throw new common_1.UnauthorizedException('Token de Kerveros inválido o malformado');
+            }
+            if (payload['exp'] && Date.now() >= payload['exp'] * 1000) {
+                throw new common_1.UnauthorizedException('Token de Kerveros expirado');
+            }
+            console.log(`🔍 Kerveros payload decodificado:`, {
+                ci: payload.ci,
+                nombre: payload.nombre,
+                email: payload.email,
+                grado: payload.grado,
+                unidad: payload.unidad,
+            });
+            return {
+                ci: payload.ci,
+                nombre: payload.nombre,
+                grado: payload.grado,
+                unidad: payload.unidad,
+                email: payload.email,
+                role: payload.role,
+            };
+        }
+        catch (error) {
+            if (error instanceof common_1.UnauthorizedException)
+                throw error;
+            throw new common_1.UnauthorizedException('Error al validar token de Kerveros');
+        }
+    }
     async register(data) {
         const ci = data.cedula || data.ci || '';
         const nombre_completo = data.nombreCompleto || data.nombre_completo || 'Sin nombre';
@@ -137,6 +233,34 @@ let AuthService = class AuthService {
             email: usuario.email,
             userId: usuario.id,
             message: 'Código de verificación enviado a tu email',
+        };
+    }
+    async resendOtp(data) {
+        const email = data.email || data.correo;
+        if (!email) {
+            throw new common_1.BadRequestException('El correo electrónico es obligatorio');
+        }
+        const usuario = await this.prisma.usuario.findUnique({
+            where: { email },
+        });
+        if (!usuario) {
+            throw new common_1.UnauthorizedException('Usuario no encontrado');
+        }
+        if (usuario.activo === false) {
+            throw new common_1.UnauthorizedException('Usuario inactivo');
+        }
+        const { otp, codigo } = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+        try {
+            await this.emailService.sendOTP(email, otp);
+        }
+        catch (e) {
+            console.warn(`⚠️ No se pudo enviar email a ${email}:`, e.message);
+        }
+        console.log(`🔐 [RESEND] OTP para ${email}: ${otp} (expira en 10 min)`);
+        console.log(`📝 ID del código: ${codigo.id}`);
+        return {
+            message: 'Nuevo código de verificación enviado a tu email',
+            email: usuario.email,
         };
     }
     async verifyOtp(data) {

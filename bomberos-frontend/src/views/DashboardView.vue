@@ -1,12 +1,19 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { authService } from '../services/auth.service.js'
+
+const router = useRouter()
+
+const user = ref(null)
+const userRole = ref('')
 
 // Métricas rápidas para el personal de Bomberos
 const metricas = ref([
   { id: 1, titulo: 'Trámites Totales', valor: '1,248', cambio: '+12% este mes', color: 'text-slate-900', bg: 'bg-slate-50' },
   { id: 2, titulo: 'En Inspección', valor: '84', cambio: 'Asignados hoy', color: 'text-amber-600', bg: 'bg-amber-50/50' },
   { id: 3, titulo: 'Aprobados (SIPAB)', valor: '912', cambio: 'Firma digital lista', color: 'text-emerald-600', bg: 'bg-emerald-50/50' },
-  { id: 4, titulo: 'Observados', valor: '32', cambio: 'Requieren revisión', color: 'text-rose-600', bg: 'bg-rose-50/50' },
+  { id: 4, titulo: 'Observados', valor: '32', cambio: 'Requieren revisión', color: 'text-rose-600', bg: 'bg-rose-50/50' }
 ])
 
 // Bandeja de inspecciones recientes pendientes de asignación o informe
@@ -24,6 +31,26 @@ const getUrgenciaEstilo = (urgencia) => {
     default: return 'bg-slate-100 text-slate-600'
   }
 }
+
+const getRoleBadge = (role) => {
+  switch (role) {
+    case 'ADMIN': return { label: 'ADMINISTRADOR', color: 'bg-amber-500 text-amber-900', icon: '⚙️' }
+    case 'INTERNO': return { label: 'PERSONAL INTERNO (POLICÍA)', color: 'bg-blue-500 text-blue-900', icon: '👮' }
+    case 'EXTERNO': return { label: 'USUARIO EXTERNO', color: 'bg-emerald-500 text-emerald-900', icon: '👤' }
+    default: return { label: role || 'SIN ROL', color: 'bg-slate-500 text-slate-900', icon: '❓' }
+  }
+}
+
+const roleInfo = computed(() => getRoleBadge(userRole.value))
+
+onMounted(() => {
+  // Obtener usuario y rol desde localStorage
+  const storedUser = authService.getUser()
+  const storedRole = authService.getUserRole()
+  
+  user.value = storedUser
+  userRole.value = storedRole || storedUser?.role || storedUser?.tipo_persona || 'EXTERNO'
+})
 </script>
 
 <template>
@@ -33,10 +60,27 @@ const getUrgenciaEstilo = (urgencia) => {
     <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800">
       <div class="p-6 border-b border-slate-800 flex items-center gap-3">
         <div class="w-7 h-7 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md">B</div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h2 class="text-xs font-black tracking-wider text-white uppercase">Panel Interno</h2>
           <p class="text-[10px] text-slate-500 font-medium">Dirección de Bomberos</p>
         </div>
+      </div>
+      
+      <!-- Info de usuario logueado -->
+      <div class="px-4 py-3 border-b border-slate-800">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+            {{ user?.nombre?.charAt(0) || 'U' }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold text-white truncate">{{ user?.nombre || 'Usuario' }}</p>
+            <p class="text-[10px] text-slate-400 truncate">{{ user?.email || user?.ci || '' }}</p>
+          </div>
+        </div>
+        <span :class="['inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', roleInfo.color]">
+          <span>{{ roleInfo.icon }}</span>
+          {{ roleInfo.label }}
+        </span>
       </div>
       
       <!-- Menú del Sidebar -->
@@ -57,7 +101,7 @@ const getUrgenciaEstilo = (urgencia) => {
       </nav>
       
       <div class="p-4 border-t border-slate-800 text-[10px] text-slate-500 font-medium text-center">
-        Sesión: Operador Técnico
+        Sesión: {{ roleInfo.label }}
       </div>
     </aside>
 

@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { LoginDto, VerifyOtpDto, RegisterDto } from './dto';
+import { LoginDto, VerifyOtpDto, RegisterDto, ResendOtpDto, KerverosExchangeDto } from './dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
@@ -35,5 +35,44 @@ export declare class AuthController {
             tipo_persona: string;
             role: string;
         };
+    }>;
+    resendOtp(resendOtpDto: ResendOtpDto): Promise<{
+        message: string;
+        email: string;
+    }>;
+    exchangeKerverosToken(dto: KerverosExchangeDto): Promise<{
+        token: string;
+        user: {
+            id: number;
+            email: string;
+            nombre: string;
+            ci: string;
+            tipo_persona: string;
+            role: string;
+            grado: string | null;
+            unidad: string | null;
+        };
+    }>;
+    kerverosCallback(token: string): Promise<{
+        success: boolean;
+        message: string;
+        redirectUrl: string;
+        token?: undefined;
+        user?: undefined;
+    } | {
+        success: boolean;
+        token: string;
+        user: {
+            id: number;
+            email: string;
+            nombre: string;
+            ci: string;
+            tipo_persona: string;
+            role: string;
+            grado: string | null;
+            unidad: string | null;
+        };
+        redirectUrl: string;
+        message?: undefined;
     }>;
 }

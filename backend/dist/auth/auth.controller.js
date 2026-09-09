@@ -46,6 +46,48 @@ let AuthController = class AuthController {
             codigo: verifyOtpDto.codigo,
         });
     }
+    async resendOtp(resendOtpDto) {
+        const email = resendOtpDto.email || resendOtpDto.correo;
+        console.log(`🔄 Resend OTP: ${email}`);
+        return this.authService.resendOtp({ email });
+    }
+    async exchangeKerverosToken(dto) {
+        console.log(`🔐 Kerveros exchange attempt`);
+        try {
+            return await this.authService.exchangeKerverosToken(dto.token);
+        }
+        catch (error) {
+            console.error(`❌ Kerveros exchange failed:`, error.message);
+            throw error;
+        }
+    }
+    async kerverosCallback(token) {
+        console.log(`🔐 Kerveros callback received`);
+        if (!token) {
+            return {
+                success: false,
+                message: 'Token de Kerveros no proporcionado',
+                redirectUrl: '/login?error=kerveros_token_missing',
+            };
+        }
+        try {
+            const result = await this.authService.exchangeKerverosToken(token);
+            return {
+                success: true,
+                token: result.token,
+                user: result.user,
+                redirectUrl: '/admin/dashboard',
+            };
+        }
+        catch (error) {
+            console.error(`❌ Kerveros callback failed:`, error.message);
+            return {
+                success: false,
+                message: error.message || 'Error al procesar token de Kerveros',
+                redirectUrl: '/login?error=kerveros_invalid',
+            };
+        }
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -88,6 +130,29 @@ __decorate([
     __metadata("design:paramtypes", [dto_1.VerifyOtpDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyOtp", null);
+__decorate([
+    (0, common_1.Post)('resend-otp'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dto_1.ResendOtpDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resendOtp", null);
+__decorate([
+    (0, common_1.Post)('kerveros/exchange'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dto_1.KerverosExchangeDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "exchangeKerverosToken", null);
+__decorate([
+    (0, common_1.Get)('kerveros/callback'),
+    __param(0, (0, common_1.Query)('token')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "kerverosCallback", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

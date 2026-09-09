@@ -5,6 +5,15 @@ import * as bcrypt from 'bcrypt';
 import { OtpService } from './otp.service';
 import { EmailService } from '../email/email.service';
 
+interface KerverosPayload {
+  ci: string;
+  nombre: string;
+  grado?: string;
+  unidad?: string;
+  email: string;
+  role?: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -13,6 +22,124 @@ export class AuthService {
     private otpService: OtpService,
     private emailService: EmailService,
   ) {}
+
+  // KERVEROS: Intercambio de token Kerveros por JWT interno
+  async exchangeKerverosToken(kerverosToken: string) {
+    // 1. Validar token de Kerveros (simulado en desarrollo)
+    const kerverosPayload = await this.validateKerverosToken(kerverosToken);
+
+    const { ci, nombre, grado, unidad, email } = kerverosPayload;
+
+    if (!ci || !email) {
+      throw new BadRequestException('Token de Kerveros inválido: faltan datos obligatorios (ci, email)');
+    }
+
+    // 2. Buscar o crear usuario en base de datos
+    let usuario = await this.prisma.usuario.findFirst({
+      where: { OR: [{ ci }, { email }] },
+    });
+
+    const datosActualizados = {
+      nombre_completo: nombre,
+      email,
+      ci,
+      grado: grado || null,
+      unidad: unidad || null,
+      tipo_persona: 'INTERNO', // Marcar como usuario interno
+      verificado: true,
+      activo: true,
+      ultimo_acceso: new Date(),
+    };
+
+    if (!usuario) {
+      // Crear nuevo usuario interno con contraseña aleatoria (no se usa para login Kerveros)
+      const salt = await bcrypt.genSalt(10);
+      const password_hash = await bcrypt.hash(`Kerveros_${Date.now()}_${Math.random().toString(36).slice(2)}`, salt);
+
+      usuario = await this.prisma.usuario.create({
+        data: {
+          ...datosActualizados,
+          password_hash,
+          telefono: '',
+          departamento: unidad || '',
+        },
+      });
+      console.log(`✅ Usuario INTERNO creado desde Kerveros: ${email} (CI: ${ci})`);
+    } else {
+      // Actualizar datos si cambiaron
+      await this.prisma.usuario.update({
+        where: { id: usuario.id },
+        data: datosActualizados,
+      });
+      console.log(`🔄 Usuario INTERNO actualizado desde Kerveros: ${email} (CI: ${ci})`);
+    }
+
+    // 3. Emitir JWT propio con role: 'INTERNO'
+    const payload = {
+      sub: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre_completo,
+      ci: usuario.ci,
+      tipo_persona: usuario.tipo_persona,
+      role: 'INTERNO',
+      grado: usuario.grado,
+      unidad: usuario.unidad,
+    };
+
+    const token = this.jwtService.sign(payload);
+
+    return {
+      token,
+      user: {
+        id: usuario.id,
+        email: usuario.email,
+        nombre: usuario.nombre_completo,
+        ci: usuario.ci,
+        tipo_persona: usuario.tipo_persona,
+        role: 'INTERNO',
+        grado: usuario.grado,
+        unidad: usuario.unidad,
+      },
+    };
+  }
+
+  // Validación simulada del token Kerveros (en producción validar contra clave pública de policia.bo)
+  private async validateKerverosToken(token: string): Promise<KerverosPayload> {
+    // EN DESARROLLO: Decodificar sin verificar (simulación)
+    // EN PRODUCCIÓN: Verificar firma con clave pública de https://kerveros-dev.policia.bo/.well-known/jwks.json
+    try {
+      const payload = this.jwtService.decode(token) as KerverosPayload | null;
+      
+      if (!payload) {
+        throw new UnauthorizedException('Token de Kerveros inválido o malformado');
+      }
+
+      // Validar expiración si existe
+      if (payload['exp'] && Date.now() >= payload['exp'] * 1000) {
+        throw new UnauthorizedException('Token de Kerveros expirado');
+      }
+
+      console.log(`🔍 Kerveros payload decodificado:`, {
+        ci: payload.ci,
+        nombre: payload.nombre,
+        email: payload.email,
+        grado: payload.grado,
+        unidad: payload.unidad,
+      });
+
+      return {
+        ci: payload.ci,
+        nombre: payload.nombre,
+        grado: payload.grado,
+        unidad: payload.unidad,
+        email: payload.email,
+        role: payload.role,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
+      throw new UnauthorizedException('Error al validar token de Kerveros');
+    }
+  }
 
   // 1. Registro Inicial: Crea el usuario con una contraseña fija (o la que se le asigne)
   async register(data: {
