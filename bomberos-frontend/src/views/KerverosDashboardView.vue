@@ -97,21 +97,26 @@ const aplicaciones = [
   }
 ];
 
-const appPrincipal = computed(() => aplicaciones.find(a => a.destacado));
+const appPrincipal = computed(() => aplicaciones.find(a => a.destacado) || aplicaciones[0] || null);
 const otrasApps = computed(() => aplicaciones.filter(a => !a.destacado));
 
 onMounted(async () => {
-  // Verificar sesión Kerveros
-  const kerverosUser = kerverosService.getKerverosUserData();
-  
-  if (!kerverosUser) {
+  try {
+    const kerverosUser = kerverosService.getKerverosUserData();
+    if (!kerverosUser) {
+      loading.value = false;
+      router.push('/auth/kerveros');
+      return;
+    }
+    user.value = kerverosUser;
+  } catch (e) {
+    console.error('Error cargando sesión Kerveros:', e);
+    loading.value = false;
     router.push('/auth/kerveros');
     return;
+  } finally {
+    loading.value = false;
   }
-
-  user.value = kerverosUser;
-  loading.value = false;
-  
   // Ocultar badge simulación después de 5 segundos
   setTimeout(() => {
     showSimulationBadge.value = false;
@@ -280,17 +285,20 @@ const getRolBadge = (role) => {
             >
               <!-- Contenido principal -->
               <div class="flex items-center gap-6 flex-1">
-                <div :class="['w-20 h-20 rounded-2xl flex items-center justify-center text-4xl', appPrincipal.value.bgColor]">
-                  {{ appPrincipal.value.icon }}
+                <div 
+                     v-if="appPrincipal" 
+                     :class="['w-20 h-20 rounded-2xl flex items-center justify-center text-4xl', appPrincipal.bgColor]"
+                >
+                     {{ appPrincipal.icon }}
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-3 mb-2">
-                    <h3 class="text-xl font-black text-white">{{ appPrincipal.value.nombre }}</h3>
-                    <span :class="['px-3 py-1 rounded-full text-[10px] font-bold uppercase', appPrincipal.value.badgeColor]">
-                      {{ appPrincipal.value.badge }}
+                    <h3 class="text-xl font-black text-white">{{ appPrincipal.nombre }}</h3>
+                    <span :class="['px-3 py-1 rounded-full text-[10px] font-bold uppercase', appPrincipal.badgeColor]">
+                      {{ appPrincipal.badge }}
                     </span>
                   </div>
-                  <p class="text-slate-300 text-sm">{{ appPrincipal.value.descripcion }}</p>
+                  <p class="text-slate-300 text-sm">{{ appPrincipal.descripcion }}</p>
                   <div class="mt-3 flex items-center gap-2 text-slate-500 text-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
