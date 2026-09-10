@@ -174,6 +174,13 @@ const fillCredentials = (user) => {
         </span>
       </div>
 
+      <!-- Badge requerido por guía Fase Autoverificación -->
+      <div class="mt-2 text-center">
+        <div class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full inline-block">
+          🔧 Modo Desarrollo - Simulación
+        </div>
+      </div>
+
       <!-- Footer -->
       <div class="mt-6 text-center text-[10px] text-slate-600 uppercase tracking-wider">
         Dirección Nacional de Bomberos • Policía Boliviana

@@ -255,6 +255,15 @@ const getRolBadge = (role) => {
           </div>
         </div>
 
+        <!-- Badge simulación guía Fase Autoverificación -->
+        <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+          <p class="text-sm text-yellow-800">
+            ⚠️ <span class="font-semibold">Simulación:</span> 
+            Haga clic en <span class="font-semibold text-green-700">🛡️ SIPPCCI</span> 
+            para ingresar al sistema de Bomberos.
+          </p>
+        </div>
+
         <!-- Aplicación Principal (SIPPCI) -->
         <div class="mb-8">
           <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
