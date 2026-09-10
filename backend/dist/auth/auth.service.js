@@ -41,6 +41,10 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -49,16 +53,31 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const bcrypt = __importStar(require("bcrypt"));
 const otp_service_1 = require("./otp.service");
 const email_service_1 = require("../email/email.service");
-let AuthService = class AuthService {
+const config_1 = require("@nestjs/config");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const jwks_rsa_1 = __importDefault(require("jwks-rsa"));
+let AuthService = AuthService_1 = class AuthService {
     prisma;
     jwtService;
     otpService;
     emailService;
-    constructor(prisma, jwtService, otpService, emailService) {
+    configService;
+    logger = new common_1.Logger(AuthService_1.name);
+    jwksClientInstance = null;
+    constructor(prisma, jwtService, otpService, emailService, configService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
         this.otpService = otpService;
         this.emailService = emailService;
+        this.configService = configService;
+        const jwksUrl = this.configService.get('KERVEROS_JWKS_URL');
+        if (jwksUrl) {
+            this.jwksClientInstance = (0, jwks_rsa_1.default)({
+                jwksUri: jwksUrl,
+                cache: true,
+                cacheMaxAge: 10 * 60 * 1000,
+            });
+        }
     }
     async exchangeKerverosToken(kerverosToken) {
         const kerverosPayload = await this.validateKerverosToken(kerverosToken);
@@ -126,7 +145,11 @@ let AuthService = class AuthService {
         };
     }
     async validateKerverosToken(token) {
-        try {
+        const jwksUrl = this.configService.get('KERVEROS_JWKS_URL');
+        const issuer = this.configService.get('KERVEROS_ISSUER');
+        const audience = this.configService.get('KERVEROS_AUDIENCE');
+        if (!jwksUrl || !this.jwksClientInstance) {
+            this.logger.warn('⚠️ KERVEROS_JWKS_URL no configurada, modo MOCK');
             const payload = this.jwtService.decode(token);
             if (!payload) {
                 throw new common_1.UnauthorizedException('Token de Kerveros inválido o malformado');
@@ -134,12 +157,10 @@ let AuthService = class AuthService {
             if (payload['exp'] && Date.now() >= payload['exp'] * 1000) {
                 throw new common_1.UnauthorizedException('Token de Kerveros expirado');
             }
-            console.log(`🔍 Kerveros payload decodificado:`, {
+            this.logger.log(`🔍 Kerveros payload decodificado (MOCK):`, {
                 ci: payload.ci,
                 nombre: payload.nombre,
                 email: payload.email,
-                grado: payload.grado,
-                unidad: payload.unidad,
             });
             return {
                 ci: payload.ci,
@@ -150,11 +171,41 @@ let AuthService = class AuthService {
                 role: payload.role,
             };
         }
-        catch (error) {
-            if (error instanceof common_1.UnauthorizedException)
-                throw error;
-            throw new common_1.UnauthorizedException('Error al validar token de Kerveros');
-        }
+        this.logger.log('🔐 Kerveros en modo REAL con validación de firma JWKS');
+        return new Promise((resolve, reject) => {
+            const getKey = (header, callback) => {
+                this.jwksClientInstance.getSigningKey(header.kid, (err, key) => {
+                    if (err) {
+                        this.logger.error('❌ Error obteniendo clave JWKS:', err.message);
+                        return callback(err);
+                    }
+                    callback(null, key.getPublicKey());
+                });
+            };
+            jsonwebtoken_1.default.verify(token, getKey, {
+                issuer,
+                audience,
+                algorithms: ['RS256'],
+            }, (err, decoded) => {
+                if (err) {
+                    this.logger.error('❌ Error validando token Kerveros:', err.message);
+                    return reject(new common_1.UnauthorizedException('Token de Kerveros inválido'));
+                }
+                this.logger.log(`🔍 Kerveros payload verificado:`, {
+                    ci: decoded.ci,
+                    nombre: decoded.nombre,
+                    email: decoded.email,
+                });
+                resolve({
+                    ci: decoded.ci,
+                    nombre: decoded.nombre,
+                    grado: decoded.grado,
+                    unidad: decoded.unidad,
+                    email: decoded.email,
+                    role: decoded.role,
+                });
+            });
+        });
     }
     async register(data) {
         const ci = data.cedula || data.ci || '';
@@ -169,7 +220,10 @@ let AuthService = class AuthService {
         let user = await this.prisma.usuario.findFirst({
             where: { OR: [{ email }, { ci }] }
         });
-        const passwordPlana = data.password || 'Bomberos2026*';
+        if (!data.password || data.password.trim() === '') {
+            throw new common_1.BadRequestException('La contraseña es obligatoria');
+        }
+        const passwordPlana = data.password;
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(passwordPlana, salt);
         if (!user) {
@@ -335,11 +389,12 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService,
         otp_service_1.OtpService,
-        email_service_1.EmailService])
+        email_service_1.EmailService,
+        config_1.ConfigService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

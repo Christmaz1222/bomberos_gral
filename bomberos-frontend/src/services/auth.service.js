@@ -14,8 +14,7 @@ export const authService = {
         departamento: datosRegistro.departamento || '',
         // representaEmpresa 'si'/'no' → tipo_persona 'EMPRESA'/'NATURAL'
         tipo_persona: datosRegistro.tipo_persona || (datosRegistro.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL'),
-        // Password por defecto si no viene del formulario (backend también tiene fallback)
-        password: datosRegistro.password || 'Bomberos2026*',
+        password: datosRegistro.password,
         // Opcionales del DTO
         ...(datosRegistro.provincia && { provincia: datosRegistro.provincia }),
         ...(datosRegistro.municipio && { municipio: datosRegistro.municipio }),

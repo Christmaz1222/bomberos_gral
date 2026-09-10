@@ -15,10 +15,11 @@ const formularioRegistro = ref({
   nombreCompleto: '',
   departamento: '',
   correo: '',
+  password: '',
   representaEmpresa: 'no',
   nit: '',
   celular: '',
-  formularioARegistrar: [] // Cambiado a un arreglo para permitir múltiples selecciones
+  formularioARegistrar: []
 })
 
 const cargandoSegip = ref(false)
@@ -128,7 +129,7 @@ const procesarRegistro = async () => {
       departamento: formularioRegistro.value.departamento,
       representaEmpresa: formularioRegistro.value.representaEmpresa,
       tipo_persona: formularioRegistro.value.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL',
-      password: 'Bomberos2026*',
+      password: formularioRegistro.value.password || '',
     })
 
     alert(`¡Registro Exitoso!\nSe han enviado sus credenciales de acceso al correo: ${formularioRegistro.value.correo}.`)
@@ -319,6 +320,11 @@ const reenviarCodigo = async () => {
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Número de Celular</label>
               <input v-model.number="formularioRegistro.celular" type="tel" pattern="[0-9]{7,8}" required placeholder="Ej. 71234567" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
             </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contraseña</label>
+            <input v-model.trim="formularioRegistro.password" type="password" required placeholder="Mínimo 8 caracteres" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
           </div>
 
           <div>

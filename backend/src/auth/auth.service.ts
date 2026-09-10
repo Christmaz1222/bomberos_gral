@@ -1,9 +1,12 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { OtpService } from './otp.service';
 import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
 
 interface KerverosPayload {
   ci: string;
@@ -16,12 +19,25 @@ interface KerverosPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private jwksClientInstance: jwksClient.JwksClient | null = null;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private otpService: OtpService,
     private emailService: EmailService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    const jwksUrl = this.configService.get<string>('KERVEROS_JWKS_URL');
+    if (jwksUrl) {
+      this.jwksClientInstance = jwksClient({
+        jwksUri: jwksUrl,
+        cache: true,
+        cacheMaxAge: 10 * 60 * 1000,
+      });
+    }
+  }
 
   // KERVEROS: Intercambio de token Kerveros por JWT interno
   async exchangeKerverosToken(kerverosToken: string) {
@@ -103,30 +119,26 @@ export class AuthService {
     };
   }
 
-  // Validación simulada del token Kerveros (en producción validar contra clave pública de policia.bo)
+  // Validación real del token Kerveros con verificación de firma JWKS
   private async validateKerverosToken(token: string): Promise<KerverosPayload> {
-    // EN DESARROLLO: Decodificar sin verificar (simulación)
-    // EN PRODUCCIÓN: Verificar firma con clave pública de https://kerveros-dev.policia.bo/.well-known/jwks.json
-    try {
+    const jwksUrl = this.configService.get<string>('KERVEROS_JWKS_URL');
+    const issuer = this.configService.get<string>('KERVEROS_ISSUER');
+    const audience = this.configService.get<string>('KERVEROS_AUDIENCE');
+
+    if (!jwksUrl || !this.jwksClientInstance) {
+      this.logger.warn('⚠️ KERVEROS_JWKS_URL no configurada, modo MOCK');
       const payload = this.jwtService.decode(token) as KerverosPayload | null;
-      
       if (!payload) {
         throw new UnauthorizedException('Token de Kerveros inválido o malformado');
       }
-
-      // Validar expiración si existe
       if (payload['exp'] && Date.now() >= payload['exp'] * 1000) {
         throw new UnauthorizedException('Token de Kerveros expirado');
       }
-
-      console.log(`🔍 Kerveros payload decodificado:`, {
+      this.logger.log(`🔍 Kerveros payload decodificado (MOCK):`, {
         ci: payload.ci,
         nombre: payload.nombre,
         email: payload.email,
-        grado: payload.grado,
-        unidad: payload.unidad,
       });
-
       return {
         ci: payload.ci,
         nombre: payload.nombre,
@@ -135,10 +147,50 @@ export class AuthService {
         email: payload.email,
         role: payload.role,
       };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) throw error;
-      throw new UnauthorizedException('Error al validar token de Kerveros');
     }
+
+    this.logger.log('🔐 Kerveros en modo REAL con validación de firma JWKS');
+
+    return new Promise((resolve, reject) => {
+      const getKey = (header: any, callback: any) => {
+        this.jwksClientInstance!.getSigningKey(header.kid, (err, key) => {
+          if (err) {
+            this.logger.error('❌ Error obteniendo clave JWKS:', err.message);
+            return callback(err);
+          }
+          callback(null, key!.getPublicKey());
+        });
+      };
+
+      jwt.verify(
+        token,
+        getKey,
+        {
+          issuer,
+          audience,
+          algorithms: ['RS256'],
+        },
+        (err, decoded: any) => {
+          if (err) {
+            this.logger.error('❌ Error validando token Kerveros:', err.message);
+            return reject(new UnauthorizedException('Token de Kerveros inválido'));
+          }
+          this.logger.log(`🔍 Kerveros payload verificado:`, {
+            ci: decoded.ci,
+            nombre: decoded.nombre,
+            email: decoded.email,
+          });
+          resolve({
+            ci: decoded.ci,
+            nombre: decoded.nombre,
+            grado: decoded.grado,
+            unidad: decoded.unidad,
+            email: decoded.email,
+            role: decoded.role,
+          });
+        },
+      );
+    });
   }
 
   // 1. Registro Inicial: Crea el usuario con una contraseña fija (o la que se le asigne)
@@ -172,8 +224,10 @@ export class AuthService {
       where: { OR: [{ email }, { ci }] }
     });
 
-    // Contraseña fija por defecto si no se especifica otra
-    const passwordPlana = data.password || 'Bomberos2026*';
+    if (!data.password || data.password.trim() === '') {
+      throw new BadRequestException('La contraseña es obligatoria');
+    }
+    const passwordPlana = data.password;
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(passwordPlana, salt);

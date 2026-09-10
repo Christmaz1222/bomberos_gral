@@ -2,12 +2,16 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { OtpService } from './otp.service';
 import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 export declare class AuthService {
     private prisma;
     private jwtService;
     private otpService;
     private emailService;
-    constructor(prisma: PrismaService, jwtService: JwtService, otpService: OtpService, emailService: EmailService);
+    private configService;
+    private readonly logger;
+    private jwksClientInstance;
+    constructor(prisma: PrismaService, jwtService: JwtService, otpService: OtpService, emailService: EmailService, configService: ConfigService);
     exchangeKerverosToken(kerverosToken: string): Promise<{
         token: string;
         user: {

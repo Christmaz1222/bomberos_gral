@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, Length, IsIn, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, Length, IsIn, IsOptional, IsNotEmpty } from 'class-validator';
 
 export class RegisterDto {
   @IsNotEmpty({ message: 'El CI es obligatorio' })
@@ -21,7 +21,8 @@ export class RegisterDto {
 
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
   @IsString({ message: 'La contraseña debe ser texto' })
-  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  @MaxLength(100, { message: 'La contraseña no debe exceder 100 caracteres' })
   password: string;
 
   @IsNotEmpty({ message: 'El tipo de persona es obligatorio' })
