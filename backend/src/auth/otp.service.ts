@@ -41,32 +41,25 @@ export class OtpService {
   ): Promise<{ otp: string; codigo: any }> {
     const otp = this.generateOTP();
     const codigo_hash = await this.hashOTP(otp);
-    const expira = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    const expira = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Invalida códigos anteriores no usados del mismo tipo
-    await this.prisma.codigoVerificacion.updateMany({
-      where: {
-        usuario_id: usuarioId,
-        tipo,
-        usado: false,
-      },
-      data: {
-        usado: true,
-      },
-    });
+    try {
+      await this.prisma.codigoVerificacion.updateMany({
+        where: { usuario_id: usuarioId, tipo, usado: false },
+        data: { usado: true },
+      });
+    } catch (error) {
+      console.warn(`⚠️ updateMany falló para usuario ${usuarioId}:`, (error as Error).message);
+    }
 
-    const codigo = await this.prisma.codigoVerificacion.create({
-      data: {
-        usuario_id: usuarioId,
-        codigo_hash,
-        tipo,
-        expira,
-        intentos: 0,
-        usado: false,
-      },
-    });
-
-    return { otp, codigo };
+    try {
+      const codigo = await this.prisma.codigoVerificacion.create({
+        data: { usuario_id: usuarioId, codigo_hash, tipo, expira, intentos: 0, usado: false },
+      });
+      return { otp, codigo };
+    } catch (error) {
+      throw new Error(`Error creando código de verificación: ${(error as Error).message}`);
+    }
   }
 
   /**

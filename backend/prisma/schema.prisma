@@ -83,6 +83,9 @@ model CodigoVerificacion {
   created_at  DateTime @default(now())
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([usuario_id, tipo, usado])
 }
 
 // ============================================

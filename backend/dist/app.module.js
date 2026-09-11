@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
+const nestjs_pino_1 = require("nestjs-pino");
 const prisma_module_1 = require("./prisma/prisma.module");
 const auth_module_1 = require("./auth/auth.module");
 const email_module_1 = require("./email/email.module");
@@ -20,6 +21,41 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            nestjs_pino_1.LoggerModule.forRoot({
+                pinoHttp: {
+                    transport: process.env.NODE_ENV !== 'production'
+                        ? {
+                            target: 'pino-pretty',
+                            options: {
+                                colorize: true,
+                                singleLine: true,
+                                translateTime: 'SYS:standard',
+                                ignore: 'pid,hostname',
+                            },
+                        }
+                        : undefined,
+                    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+                    redact: {
+                        paths: [
+                            'req.headers.authorization',
+                            'req.body.password',
+                            'req.body.codigo',
+                            'res.headers["set-cookie"]',
+                        ],
+                        censor: '[REDACTED]',
+                    },
+                    serializers: {
+                        req: (req) => ({
+                            method: req.method,
+                            url: req.url,
+                            id: req.id,
+                        }),
+                        res: (res) => ({
+                            statusCode: res.statusCode,
+                        }),
+                    },
+                },
+            }),
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: '.env',

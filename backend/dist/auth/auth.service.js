@@ -273,7 +273,17 @@ let AuthService = AuthService_1 = class AuthService {
         if (!isPasswordValid) {
             throw new common_1.UnauthorizedException('Credenciales inválidas');
         }
-        const { otp, codigo } = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+        let otp;
+        let codigo;
+        try {
+            const result = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+            otp = result.otp;
+            codigo = result.codigo;
+        }
+        catch (error) {
+            this.logger.error(`❌ Error creando código OTP: ${error.message}`, error.stack);
+            throw new common_1.InternalServerErrorException('Error al generar código de verificación');
+        }
         try {
             await this.emailService.sendOTP(email, otp);
         }

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -288,7 +288,16 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const { otp, codigo } = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+    let otp: string;
+    let codigo: any;
+    try {
+      const result = await this.otpService.createVerificationCode(usuario.id, 'LOGIN_2FA');
+      otp = result.otp;
+      codigo = result.codigo;
+    } catch (error) {
+      this.logger.error(`❌ Error creando código OTP: ${(error as Error).message}`, (error as Error).stack);
+      throw new InternalServerErrorException('Error al generar código de verificación');
+    }
 
     try {
       await this.emailService.sendOTP(email, otp);

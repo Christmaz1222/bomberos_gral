@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as dns from 'dns';
 import * as nodemailer from 'nodemailer';
+
+dns.setDefaultResultOrder('ipv4first');
 
 @Injectable()
 export class EmailService {
@@ -18,7 +21,12 @@ export class EmailService {
         host,
         port: this.configService.get<number>('SMTP_PORT', 587),
         secure: false,
+        family: 4,
         auth: { user, pass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
       });
       this.isMock = false;
       this.logger.log('✅ EmailService configurado con SMTP real');
