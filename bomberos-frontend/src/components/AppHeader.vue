@@ -8,14 +8,22 @@
 
     <!-- Lado Derecho: Logo -->
     <div class="flex items-center gap-4">
-      <img src="#" alt="Logo Bomberos" class="h-10 w-auto" />
-      
-      <button 
-        @click="handleLogout"
-        class="bg-red-700 hover:bg-red-900 border border-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-      >
+      <img
+        v-if="logoUrl"
+        :src="logoUrl"
+        alt="Dirección Nacional de Bomberos"
+        class="h-10 w-auto"
+        @error="logoUrl = null"
+      />
+      <span
+        v-else
+        class="w-10 h-10 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-white font-black text-sm select-none"
+        aria-hidden="true"
+      >DNB</span>
+
+      <AppButton variant="danger-outline" @click="handleLogout" aria-label="Cerrar sesión de usuario">
         SALIR
-      </button>
+      </AppButton>
     </div>
   </header>
 </template>
@@ -24,10 +32,13 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { authService } from '../services/auth.service';
+import AppButton from './AppButton.vue';
 
 const router = useRouter();
 const userName = ref('Usuario'); 
 const currentDate = ref('');
+// TODO(3A-F): reemplazar por logo institucional DNB cuando exista el asset oficial
+const logoUrl = ref(null);
 
 onMounted(() => {
   const date = new Date();

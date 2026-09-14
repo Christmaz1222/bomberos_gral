@@ -4,6 +4,10 @@ import API_URL, { apiClient } from '../config/api';
 // ============================================
 // USUARIOS MOCK PARA DESARROLLO (Simula Kerveros)
 // ============================================
+// ⚠️ SOLO DEV — no usar en producción.
+// Los passwords viven en memoria únicamente para el mock; NUNCA deben
+// loguearse ni enviarse a la UI. En producción este flujo se reemplaza por
+// POST /auth/kerveros/exchange (validación del token real del SSO).
 const MOCK_USERS = [
   {
     ci: '9905200',
@@ -51,13 +55,17 @@ export const kerverosService = {
     // Simular latencia de red
     await new Promise(resolve => setTimeout(resolve, 800));
 
+    // Comparación en memoria SOLO para el mock de desarrollo.
+    // En producción este paso lo realiza el SSO real y aquí solo se recibe el
+    // token; el intercambio ocurre vía POST /auth/kerveros/exchange.
     const user = MOCK_USERS.find(u => u.ci === ci && u.password === password);
     
     if (!user) {
       throw { message: 'Credenciales inválidas. Verifique su CI y contraseña.' };
     }
 
-    // Guardar datos del usuario de Kerveros en localStorage
+    // Guardar datos del usuario de Kerveros en localStorage.
+    // NO se persiste el password.
     const kerverosUserData = {
       ci: user.ci,
       nombre: user.nombre,
@@ -169,16 +177,18 @@ export const kerverosService = {
     localStorage.removeItem('userRole');
   },
 
-  // ============================================
-  // OBTENER USUARIOS MOCK PARA MOSTRAR EN LOGIN (Solo desarrollo)
-  // ============================================
-  getMockUsers() {
-    return MOCK_USERS.map(u => ({
-      ci: u.ci,
-      nombre: u.nombre,
-      grado: u.grado,
-      unidad: u.unidad,
-      password: u.password // Solo para desarrollo
-    }));
-  }
+// ============================================
+// OBTENER USUARIOS MOCK PARA MOSTRAR EN LOGIN (Solo desarrollo)
+// ⚠️ NO se expone el password: la UI solo necesita prefill de ci/nombre.
+// ============================================
+getMockUsers() {
+  return MOCK_USERS.map(u => ({
+    ci: u.ci,
+    nombre: u.nombre,
+    grado: u.grado,
+    unidad: u.unidad,
+    email: u.email,
+    role: u.role
+  }));
+}
 };

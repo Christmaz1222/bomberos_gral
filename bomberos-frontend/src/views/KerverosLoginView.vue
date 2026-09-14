@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { kerverosService } from '../services/kerveros.service.js';
+import AppButton from '../components/AppButton.vue';
 
 const router = useRouter();
 
@@ -46,7 +47,8 @@ const toggleCredentials = () => {
 
 const fillCredentials = (user) => {
   form.ci = user.ci;
-  form.password = user.password;
+  // El password NO se expone en la UI (P1-5): el usuario debe escribirlo manualmente (mock: 123456)
+  form.password = '';
 };
 </script>
 
@@ -75,7 +77,7 @@ const fillCredentials = (user) => {
       </div>
 
       <!-- Error -->
-      <div v-if="error" class="mb-5 p-3 bg-rose-900/30 border border-rose-600/30 rounded-lg text-rose-200 text-sm flex items-center gap-2 animate-shake">
+      <div v-if="error" role="alert" class="mb-5 p-3 bg-rose-900/30 border border-rose-600/30 rounded-lg text-rose-200 text-sm flex items-center gap-2 animate-shake">
         <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
         </svg>
@@ -124,17 +126,9 @@ const fillCredentials = (user) => {
         </div>
 
         <!-- Botón Ingresar -->
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full py-3.5 bg-gradient-to-r from-red-600 to-amber-500 text-white font-bold text-sm rounded-lg shadow-lg shadow-red-500/25 hover:from-red-700 hover:to-amber-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-        >
-          <svg v-if="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <span>{{ loading ? 'Autenticando...' : 'INGRESAR A KERVEROS' }}</span>
-        </button>
+        <AppButton :submit="true" :loading="loading" variant="danger">
+          {{ loading ? 'Autenticando...' : 'INGRESAR A KERVEROS' }}
+        </AppButton>
       </form>
 
       <!-- Credenciales de prueba (Solo desarrollo) -->
@@ -154,7 +148,6 @@ const fillCredentials = (user) => {
             <p class="text-[10px] text-slate-400">{{ user.unidad }}</p>
             <div class="flex gap-2 mt-1.5 text-[10px] font-mono">
               <span class="text-slate-300">CI: <span class="text-white">{{ user.ci }}</span></span>
-              <span class="text-slate-300">Pass: <span class="text-amber-300">{{ user.password }}</span></span>
             </div>
           </div>
         </div>

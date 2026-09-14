@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import Swal from 'sweetalert2'
 import { authService } from '../services/auth.service'
-import API_URL from '../config/api'
+import AppButton from '../components/AppButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,14 +16,18 @@ const formularioRegistro = ref({
   nombreCompleto: '',
   departamento: '',
   correo: '',
-  password: '',
-  representaEmpresa: 'no',
-  nit: '',
   celular: '',
-  formularioARegistrar: []
+  password: '',
+  confirmarPassword: '',
+  representaEmpresa: 'no',
+  tramitesSolicitados: []
 })
 
-const cargandoSegip = ref(false)
+const formularioLogin = ref({
+  correo: '',
+  password: ''
+})
+
 const cargandoRegistro = ref(false)
 const cargandoLogin = ref(false)
 const cargandoOtp = ref(false)
@@ -32,13 +37,38 @@ const errorLogin = ref('')
 const errorOtp = ref('')
 const mensajeReenvio = ref('')
 
-const formularioLogin = ref({
-  correo: '',
-  password: ''
+// Estado para controlar la visibilidad de la contraseña
+const mostrarPassword = ref(false)
+const mostrarPasswordRegistro = ref(false)
+const mostrarConfirmarPassword = ref(false)
+
+// Modales (declarados al inicio para evitar el bug de temporal dead zone)
+const mostrarModal2FA = ref(false)
+const codigoOTP = ref('')
+const mostrarModalUsuarioExistente = ref(false)
+const mostrarModalRecuperacion = ref(false)
+
+// Autofocus del código OTP al abrir el modal de verificación
+const otpInput = ref(null)
+watch(mostrarModal2FA, (visible) => {
+  if (visible) nextTick(() => otpInput.value?.focus())
 })
 
-// Estado para controlar la visibilidad de la contraseña en el login
-const mostrarPassword = ref(false)
+// ==========================================
+// VALIDACIONES EN VIVO
+// ==========================================
+const ciValido = computed(() => /^\d{6,10}$/.test(formularioRegistro.value.ci))
+
+const nombreValido = computed(() => {
+  const n = formularioRegistro.value.nombreCompleto.trim()
+  return n.length >= 3 && !/\d/.test(n)
+})
+
+const passwordValida = computed(() => formularioRegistro.value.password.length >= 8)
+
+const passwordsCoinciden = computed(
+  () => passwordValida.value && formularioRegistro.value.password === formularioRegistro.value.confirmarPassword
+)
 
 const departamentosBolivia = [
   { codigo: 'LP', nombre: 'La Paz' },
@@ -70,53 +100,40 @@ onMounted(() => {
     const formatoModulo = param.replace(/-/g, ' ').toLowerCase()
     const encontrado = tramitesOficiales.find(t => t.toLowerCase() === formatoModulo)
     if (encontrado) {
-      formularioRegistro.value.formularioARegistrar = [encontrado]
+      formularioRegistro.value.tramitesSolicitados = [encontrado]
     }
   }
 })
 
-const buscarEnSegip = async () => {
-  if (!formularioRegistro.value.ci || formularioRegistro.value.ci.length < 5) return
-
-  cargandoSegip.value = true
-  try {
-    // Intenta primero vía authService (mock) y luego backend real si existe
-    try {
-      const segipRes = await authService.consultarSegip(formularioRegistro.value.ci)
-      if (segipRes && segipRes.nombre_completo) {
-        formularioRegistro.value.nombreCompleto = segipRes.nombre_completo
-        return
-      }
-    } catch {}
-    const respuesta = await fetch(`${API_URL}/segip/consultar?ci=${formularioRegistro.value.ci}`)
-    if (respuesta.ok) {
-      const datosPersona = await respuesta.json()
-      if (datosPersona && (datosPersona.nombreCompleto || datosPersona.nombre_completo)) {
-        formularioRegistro.value.nombreCompleto = datosPersona.nombreCompleto || datosPersona.nombre_completo
-      }
-    } else {
-      console.warn('Consulta SEGIP en desarrollo o sin conexión estricta.')
-    }
-  } catch (error) {
-    console.error('Error al consultar SEGIP:', error)
-  } finally {
-    cargandoSegip.value = false
-  }
-}
-
 const procesarRegistro = async () => {
-  if (formularioRegistro.value.representaEmpresa === 'si' && !formularioRegistro.value.nit) {
-    errorRegistro.value = 'Por favor, introduzca el número de NIT de su empresa.'
+  errorRegistro.value = ''
+
+  if (!formularioRegistro.value.ci) {
+    errorRegistro.value = 'Ingrese su número de cédula de identidad.'
     return
   }
-
-  if (formularioRegistro.value.formularioARegistrar.length === 0) {
+  if (!ciValido.value) {
+    errorRegistro.value = 'Ingrese una cédula válida (solo dígitos, 6 a 10 caracteres).'
+    return
+  }
+  if (!nombreValido.value) {
+    errorRegistro.value = 'Ingrese su nombre completo (sin números, mínimo 3 caracteres).'
+    return
+  }
+  if (!passwordValida.value) {
+    errorRegistro.value = 'La contraseña debe tener al menos 8 caracteres.'
+    return
+  }
+  if (!passwordsCoinciden.value) {
+    errorRegistro.value = 'Las contraseñas no coinciden.'
+    return
+  }
+  if (formularioRegistro.value.tramitesSolicitados.length === 0) {
     errorRegistro.value = 'Por favor, seleccione al menos un trámite o área de destino.'
     return
   }
 
   cargandoRegistro.value = true
-  errorRegistro.value = ''
   try {
     const resultado = await authService.register({
       ci: formularioRegistro.value.ci,
@@ -129,13 +146,21 @@ const procesarRegistro = async () => {
       departamento: formularioRegistro.value.departamento,
       representaEmpresa: formularioRegistro.value.representaEmpresa,
       tipo_persona: formularioRegistro.value.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL',
-      password: formularioRegistro.value.password || '',
+      password: formularioRegistro.value.password,
+      tramites_solicitados: formularioRegistro.value.tramitesSolicitados,
     })
 
-    alert(`¡Registro Exitoso!\nSe han enviado sus credenciales de acceso al correo: ${formularioRegistro.value.correo}.`)
-    modoVista.value = 'login' 
+    await Swal.fire({
+      icon: 'success',
+      title: '¡Registro Exitoso!',
+      text: `Se han enviado sus credenciales de acceso al correo: ${formularioRegistro.value.correo}.`,
+      confirmButtonColor: '#0f172a',
+    })
+    modoVista.value = 'login'
     // Prellenar login
     formularioLogin.value.correo = formularioRegistro.value.correo
+    formularioLogin.value.password = ''
+    router.push('/login')
   } catch (error) {
     console.error('Error de registro:', error)
     const status = error.statusCode || error.status
@@ -150,11 +175,6 @@ const procesarRegistro = async () => {
   }
 }
 
-const mostrarModal2FA = ref(false)
-const codigoOTP = ref('')
-const mostrarModalUsuarioExistente = ref(false)
-const mostrarModalRecuperacion = ref(false)
-
 const irALogin = () => {
   formularioLogin.value.correo = formularioRegistro.value.correo
   mostrarModalUsuarioExistente.value = false
@@ -162,13 +182,13 @@ const irALogin = () => {
   router.push('/login')
 }
 
-const abrirRecuperacion = () => {
-  mostrarModalRecuperacion.value = true
-}
-
 const irAContactos = () => {
   mostrarModalRecuperacion.value = false
   router.push('/contactos')
+}
+
+const abrirRecuperacion = () => {
+  mostrarModalRecuperacion.value = true
 }
 
 const procesarLogin = async () => {
@@ -215,7 +235,12 @@ const verificarCodigoOTP = async () => {
     // auth.service ya guarda token y userRole en localStorage
     mostrarModal2FA.value = false
     codigoOTP.value = ''
-    alert('¡Código verificado con éxito! Redirigiendo a sus formularios asignados.')
+    await Swal.fire({
+      icon: 'success',
+      title: '¡Código verificado con éxito!',
+      text: 'Redirigiendo a sus formularios asignados.',
+      confirmButtonColor: '#0f172a',
+    })
     router.push('/admin/formularios')
   } catch (error) {
     console.error('Error OTP:', error)
@@ -259,9 +284,9 @@ const reenviarCodigo = async () => {
 <template>
   <div class="min-h-screen bg-slate-50 flex items-center justify-center p-6 animate-fade-in">
     <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 relative">
-      
+
       <div class="absolute top-4 right-6">
-        <button 
+        <button
           @click="modoVista = modoVista === 'registro' ? 'login' : 'registro'"
           class="relative p-2 text-xs font-bold text-red-600 hover:text-red-700 no-underline hover:underline cursor-pointer select-none"
         >
@@ -270,7 +295,7 @@ const reenviarCodigo = async () => {
       </div>
 
       <div v-if="modoVista === 'registro'" class="animate-fade-in">
-        <div class="text-center mb-8">
+        <div class="text-center mb-6">
           <div class="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white mx-auto shadow-md shadow-red-600/20 mb-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -280,113 +305,214 @@ const reenviarCodigo = async () => {
           <p class="text-xs text-slate-500 mt-1">Complete sus datos para solicitar sus credenciales de acceso al sistema.</p>
         </div>
 
-        <form @submit.prevent="procesarRegistro" class="space-y-5">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Cédula de Identidad</label>
-              <div class="relative">
-                <input 
-                  v-model.trim="formularioRegistro.ci" 
-                  @blur="buscarEnSegip"
-                  type="text" 
-                  required 
-                  placeholder="Ej. 1234567" 
-                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" 
+        <form @submit.prevent="procesarRegistro" class="space-y-6">
+
+          <!-- ================= SECCIÓN 1: DATOS PERSONALES ================= -->
+          <section class="space-y-4">
+            <div class="flex items-center gap-2 pb-2 border-b border-slate-200">
+              <span class="w-6 h-6 bg-red-50 text-red-600 rounded-lg flex items-center justify-center text-[11px] font-bold border border-red-100">1</span>
+              <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-700">Datos Personales</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Cédula de Identidad</label>
+                <input
+                  v-model.trim="formularioRegistro.ci"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="10"
+                  required
+                  placeholder="Ej. 1234567"
+                  :class="[
+                    'w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all',
+                    formularioRegistro.ci && !ciValido ? 'border-red-400' : 'border-slate-200'
+                  ]"
                 />
-                <span v-if="cargandoSegip" class="absolute right-3 top-3 text-xs text-red-600 animate-pulse">Buscando...</span>
+                <p v-if="formularioRegistro.ci && !ciValido" class="text-[10px] text-red-600 mt-1">Solo dígitos, 6 a 10 caracteres.</p>
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Nombre Completo</label>
+                <input
+                  v-model="formularioRegistro.nombreCompleto"
+                  type="text"
+                  required
+                  placeholder="Ej. Juan Pérez Mamani"
+                  :class="[
+                    'w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all',
+                    formularioRegistro.nombreCompleto && !nombreValido ? 'border-red-400' : 'border-slate-200'
+                  ]"
+                />
+                <p v-if="formularioRegistro.nombreCompleto && !nombreValido" class="text-[10px] text-red-600 mt-1">Sin números, mínimo 3 caracteres.</p>
               </div>
             </div>
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Nombre Completo (Verificado SEGIP)</label>
-              <input 
-                v-model="formularioRegistro.nombreCompleto" 
-                type="text" 
-                required 
-                placeholder="Ej. Juan Pérez Mamani" 
-                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" 
-              />
-            </div>
-          </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Departamento (Sede)</label>
+                <select v-model="formularioRegistro.departamento" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-white text-slate-700">
+                  <option value="" disabled selected>Seleccione un departamento</option>
+                  <option v-for="dep in departamentosBolivia" :key="dep.codigo" :value="dep.nombre">{{ dep.nombre }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Número de Celular</label>
+                <input v-model.trim="formularioRegistro.celular" type="tel" pattern="[0-9]{7,8}" maxlength="8" required placeholder="Ej. 71234567" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
+              </div>
+            </div>
+          </section>
+
+          <!-- ================= SECCIÓN 2: CREDENCIALES ================= -->
+          <section class="space-y-4">
+            <div class="flex items-center gap-2 pb-2 border-b border-slate-200">
+              <span class="w-6 h-6 bg-red-50 text-red-600 rounded-lg flex items-center justify-center text-[11px] font-bold border border-red-100">2</span>
+              <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-700">Credenciales de Acceso</h3>
+            </div>
+
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Departamento (Sede)</label>
-              <select v-model="formularioRegistro.departamento" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-white text-slate-700">
-                <option value="" disabled selected>Seleccione un departamento</option>
-                <option v-for="dep in departamentosBolivia" :key="dep.codigo" :value="dep.nombre">{{ dep.nombre }}</option>
-              </select>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Correo Electrónico</label>
+              <input v-model.trim="formularioRegistro.correo" type="email" required placeholder="ejemplo@correo.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contraseña</label>
+                <div class="relative">
+                  <input
+                    v-model.trim="formularioRegistro.password"
+                    :type="mostrarPasswordRegistro ? 'text' : 'password'"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Mínimo 8 caracteres"
+                    :class="[
+                      'w-full px-4 py-2.5 pr-10 rounded-xl border text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all',
+                      formularioRegistro.password && !passwordValida
+                        ? 'border-red-400'
+                        : passwordsCoinciden
+                          ? 'border-emerald-400'
+                          : 'border-slate-200'
+                    ]"
+                  />
+                  <button
+                    type="button"
+                    @click="mostrarPasswordRegistro = !mostrarPasswordRegistro"
+                    :aria-label="mostrarPasswordRegistro ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none rounded-md p-1 cursor-pointer transition-colors"
+                  >
+                    <svg v-if="!mostrarPasswordRegistro" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.07 10.07 0 014.136-5.4M9.88 9.88l-3.53-3.53m6.18 6.18l3.53 3.53M3 3l18 18" />
+                    </svg>
+                  </button>
+                </div>
+                <p v-if="formularioRegistro.password && !passwordValida" class="text-[10px] text-red-600 mt-1">Mínimo 8 caracteres.</p>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Confirmar Contraseña</label>
+                <div class="relative">
+                  <input
+                    v-model.trim="formularioRegistro.confirmarPassword"
+                    :type="mostrarConfirmarPassword ? 'text' : 'password'"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Repita su contraseña"
+                    :class="[
+                      'w-full px-4 py-2.5 pr-10 rounded-xl border text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all',
+                      formularioRegistro.confirmarPassword && passwordValida && !passwordsCoinciden
+                        ? 'border-red-400'
+                        : passwordsCoinciden
+                          ? 'border-emerald-400'
+                          : 'border-slate-200'
+                    ]"
+                  />
+                  <button
+                    type="button"
+                    @click="mostrarConfirmarPassword = !mostrarConfirmarPassword"
+                    :aria-label="mostrarConfirmarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none rounded-md p-1 cursor-pointer transition-colors"
+                  >
+                    <svg v-if="!mostrarConfirmarPassword" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.07 10.07 0 014.136-5.4M9.88 9.88l-3.53-3.53m6.18 6.18l3.53 3.53M3 3l18 18" />
+                    </svg>
+                  </button>
+                </div>
+                <p v-if="formularioRegistro.confirmarPassword && passwordValida && !passwordsCoinciden" class="text-[10px] text-red-600 mt-1">Las contraseñas no coinciden.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================= SECCIÓN 3: TRÁMITES ================= -->
+          <section class="space-y-4">
+            <div class="flex items-center gap-2 pb-2 border-b border-slate-200">
+              <span class="w-6 h-6 bg-red-50 text-red-600 rounded-lg flex items-center justify-center text-[11px] font-bold border border-red-100">3</span>
+              <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-700">Trámites de Interés</h3>
+            </div>
+
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/60 space-y-3">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600">¿Representa a una empresa institucional / privada?</label>
+              <div class="flex items-center space-x-6">
+                <label class="flex items-center text-sm font-medium text-slate-700 cursor-pointer select-none">
+                  <input type="radio" v-model="formularioRegistro.representaEmpresa" value="no" class="accent-red-600 h-4 w-4" />
+                  <span class="ml-2">No, actúo de forma independiente</span>
+                </label>
+                <label class="flex items-center text-sm font-medium text-slate-700 cursor-pointer select-none">
+                  <input type="radio" v-model="formularioRegistro.representaEmpresa" value="si" class="accent-red-600 h-4 w-4" />
+                  <span class="ml-2">Sí, represento a una empresa</span>
+                </label>
+              </div>
+              <p v-if="formularioRegistro.representaEmpresa === 'si'" class="text-[11px] text-slate-500">
+                Los datos de la empresa (NIT, razón social) se solicitarán al momento de realizar el trámite.
+              </p>
+            </div>
+
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Número de Celular</label>
-              <input v-model.number="formularioRegistro.celular" type="tel" pattern="[0-9]{7,8}" required placeholder="Ej. 71234567" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
+              <div class="flex justify-between items-center mb-2">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600">Seleccione los Trámites o Áreas de Destino (Puede elegir varios)</label>
+                <span class="text-[10px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                  {{ formularioRegistro.tramitesSolicitados.length }} seleccionados
+                </span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1 border border-slate-200 rounded-xl bg-slate-50/50">
+                <label
+                  v-for="tramite in tramitesOficiales"
+                  :key="tramite"
+                  :class="[
+                    'flex items-center p-3 rounded-lg border text-xs font-medium cursor-pointer transition-all select-none',
+                    formularioRegistro.tramitesSolicitados.includes(tramite)
+                      ? 'bg-red-50 border-red-500 text-red-900 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                  ]"
+                >
+                  <input
+                    type="checkbox"
+                    :value="tramite"
+                    v-model="formularioRegistro.tramitesSolicitados"
+                    class="accent-red-600 h-4 w-4 rounded mr-2.5"
+                  />
+                  {{ tramite }}
+                </label>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contraseña</label>
-            <input v-model.trim="formularioRegistro.password" type="password" required placeholder="Mínimo 8 caracteres" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
-          </div>
+          <p v-if="errorRegistro" role="alert" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ errorRegistro }}</p>
 
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Correo Electrónico</label>
-            <input v-model.trim="formularioRegistro.correo" type="email" required placeholder="ejemplo@correo.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" />
-          </div>
-
-          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/60 space-y-3">
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600">¿Representa a una empresa institucional / privada?</label>
-            <div class="flex items-center space-x-6">
-              <label class="flex items-center text-sm font-medium text-slate-700 cursor-pointer select-none">
-                <input type="radio" v-model="formularioRegistro.representaEmpresa" value="no" class="accent-red-600 h-4 w-4" />
-                <span class="ml-2">No, actúo de forma independiente</span>
-              </label>
-              <label class="flex items-center text-sm font-medium text-slate-700 cursor-pointer select-none">
-                <input type="radio" v-model="formularioRegistro.representaEmpresa" value="si" class="accent-red-600 h-4 w-4" />
-                <span class="ml-2">Sí, represento a una empresa</span>
-              </label>
-            </div>
-            <div v-if="formularioRegistro.representaEmpresa === 'si'" class="pt-2 animate-slide-down">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Número de NIT</label>
-              <input v-model.trim="formularioRegistro.nit" type="text" required placeholder="Introduzca el NIT de la empresa" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-white" />
-            </div>
-          </div>
-
-          <!-- CUADRÍCULA DE TRÁMITES MÚLTIPLES (Checkboxes) -->
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600">Seleccione los Trámites o Áreas de Destino (Puede elegir varios)</label>
-              <span class="text-[10px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-                {{ formularioRegistro.formularioARegistrar.length }} seleccionados
-              </span>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1 border border-slate-200 rounded-xl bg-slate-50/50">
-              <label 
-                v-for="tramite in tramitesOficiales" 
-                :key="tramite"
-                :class="[
-                  'flex items-center p-3 rounded-lg border text-xs font-medium cursor-pointer transition-all select-none',
-                  formularioRegistro.formularioARegistrar.includes(tramite) 
-                    ? 'bg-red-50 border-red-500 text-red-900 shadow-xs' 
-                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                ]"
-              >
-                <input 
-                  type="checkbox" 
-                  :value="tramite" 
-                  v-model="formularioRegistro.formularioARegistrar" 
-                  class="accent-red-600 h-4 w-4 rounded mr-2.5" 
-                />
-                {{ tramite }}
-              </label>
-            </div>
-          </div>
-
-          <p v-if="errorRegistro" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ errorRegistro }}</p>
-
-          <button type="submit" :disabled="cargandoRegistro" class="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm py-3 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2">
-            <span v-if="!cargandoRegistro">Solicitar Registro e Ingreso</span>
-            <span v-else>Enviando registro...</span>
-            <svg v-if="!cargandoRegistro" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-          </button>
+          <AppButton
+            :submit="true"
+            :loading="cargandoRegistro"
+            :disabled="!passwordsCoinciden"
+            variant="primary"
+          >
+            {{ cargandoRegistro ? 'Enviando registro...' : 'Solicitar Registro e Ingreso' }}
+          </AppButton>
         </form>
       </div>
 
@@ -404,27 +530,27 @@ const reenviarCodigo = async () => {
         <form @submit.prevent="procesarLogin" class="space-y-5">
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Correo Electrónico</label>
-            <input 
-              v-model.trim="formularioLogin.correo" 
-              type="email" 
-              required 
-              placeholder="ejemplo@correo.com" 
-              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" 
+            <input
+              v-model.trim="formularioLogin.correo"
+              type="email"
+              required
+              placeholder="ejemplo@correo.com"
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all"
             />
           </div>
 
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">Contraseña de Acceso</label>
             <div class="relative">
-              <input 
-                v-model="formularioLogin.password" 
-                :type="mostrarPassword ? 'text' : 'password'" 
-                required 
+              <input
+                v-model="formularioLogin.password"
+                :type="mostrarPassword ? 'text' : 'password'"
+                required
                 autocomplete="current-password"
-                placeholder="••••••••" 
-                class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all" 
+                placeholder="••••••••"
+                class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-500 bg-slate-50/30 transition-all"
               />
-              <button 
+              <button
                 type="button"
                 @click="mostrarPassword = !mostrarPassword"
                 :aria-label="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
@@ -441,18 +567,11 @@ const reenviarCodigo = async () => {
             </div>
           </div>
 
-          <p v-if="errorLogin" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ errorLogin }}</p>
+          <p v-if="errorLogin" role="alert" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ errorLogin }}</p>
 
-          <button 
-            type="submit" 
-            :disabled="cargandoLogin"
-            class="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm py-3 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 active:scale-[0.99] mt-2"
-          >
-            <span>{{ cargandoLogin ? 'Validando...' : 'Validar Credenciales' }}</span>
-            <svg v-if="!cargandoLogin" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </button>
+          <AppButton :submit="true" :loading="cargandoLogin" variant="primary">
+            {{ cargandoLogin ? 'Validando...' : 'Validar Credenciales' }}
+          </AppButton>
 
           <div class="text-center -mt-1">
             <button
@@ -460,17 +579,17 @@ const reenviarCodigo = async () => {
               @click="abrirRecuperacion"
               class="text-xs font-medium text-red-600 hover:text-red-700 hover:underline cursor-pointer"
             >
-              ¿Olvidaste tu contraseña? 
+              ¿Olvidaste tu contraseña?
             </button>
           </div>
         </form>
       </div>
 
     </div>
-    
+
     <div v-if="mostrarModal2FA" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200/80 p-6 relative animate-scale-up">
-          
+
           <button @click="mostrarModal2FA = false" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -490,28 +609,30 @@ const reenviarCodigo = async () => {
           <form @submit.prevent="verificarCodigoOTP" class="space-y-4">
             <div>
               <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 text-center">Código de Acceso (OTP)</label>
-              <input 
+              <input
+                ref="otpInput"
                 v-model.trim="codigoOTP"
-                type="text" 
+                type="text"
                 maxlength="6"
                 required
-                placeholder="000000" 
+                autocomplete="one-time-code"
+                inputmode="numeric"
+                placeholder="000000"
                 class="w-full text-center tracking-[0.5em] text-lg font-mono font-bold px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-red-500 bg-slate-50/50"
               />
             </div>
 
-            <p v-if="errorOtp" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">{{ errorOtp }}</p>
-            <p v-if="mensajeReenvio" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-center">{{ mensajeReenvio }}</p>
+            <p v-if="errorOtp" role="alert" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">{{ errorOtp }}</p>
+            <p v-if="mensajeReenvio" role="status" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-center">{{ mensajeReenvio }}</p>
 
-            <button type="submit" :disabled="cargandoOtp" class="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-xs py-3 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2">
-              <span>{{ cargandoOtp ? 'Verificando...' : 'Confirmar Código e Ingresar' }}</span>
-              <svg v-if="!cargandoOtp" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </button>
+            <AppButton :submit="true" :loading="cargandoOtp" variant="primary">
+              {{ cargandoOtp ? 'Verificando...' : 'Confirmar Código e Ingresar' }}
+            </AppButton>
           </form>
 
           <div class="text-center mt-4">
             <p class="text-[11px] text-slate-400">
-              ¿No recibió el correo electrónico? 
+              ¿No recibió el correo electrónico?
               <button @click="reenviarCodigo" :disabled="cargandoReenvio" type="button" class="text-red-600 font-bold hover:underline ml-1 cursor-pointer disabled:opacity-50">{{ cargandoReenvio ? 'Enviando...' : 'Reenviar código' }}</button>
             </p>
           </div>
@@ -529,8 +650,8 @@ const reenviarCodigo = async () => {
             Los datos proporcionados ya están asociados a una cuenta. Puede iniciar sesión con sus credenciales.
           </p>
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            <button @click="mostrarModalUsuarioExistente = false" type="button" class="flex-1 border border-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl hover:bg-slate-50 transition-colors">Cerrar</button>
-            <button @click="irALogin" type="button" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">Ir a iniciar sesión</button>
+            <AppButton variant="secondary" @click="mostrarModalUsuarioExistente = false" class="flex-1">Cerrar</AppButton>
+            <AppButton variant="primary" @click="irALogin" class="flex-1">Ir a iniciar sesión</AppButton>
           </div>
         </div>
       </div>
@@ -545,8 +666,8 @@ const reenviarCodigo = async () => {
             La recuperación automática está en desarrollo. Por ahora, comuníquese con soporte técnico mediante los canales oficiales.
           </p>
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            <button @click="mostrarModalRecuperacion = false" type="button" class="flex-1 border border-slate-200 text-slate-700 font-semibold text-sm py-2.5 rounded-xl hover:bg-slate-50 transition-colors">Cerrar</button>
-            <button @click="irAContactos" type="button" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2.5 rounded-xl transition-colors">Ver contactos</button>
+            <AppButton variant="secondary" @click="mostrarModalRecuperacion = false" class="flex-1">Cerrar</AppButton>
+            <AppButton variant="danger" @click="irAContactos" class="flex-1">Ver contactos</AppButton>
           </div>
         </div>
       </div>

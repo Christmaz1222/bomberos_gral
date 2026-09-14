@@ -180,7 +180,7 @@ const guardarRegistro = async () => {
   if (result.isConfirmed) {
     try {
       // 1. Aquí iría tu llamada a la API (axios/fetch)
-      console.log('Guardando en BD...', form);
+      // TODO(G-N1b): POST /solicitudes
       
       // 2. Generar el PDF y obtener la URL (asegúrate que generarPDF tenga el 'return doc.output("bloburl")')
       const pdfUrl = await generarPDF();

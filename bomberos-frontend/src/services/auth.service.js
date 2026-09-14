@@ -15,6 +15,10 @@ export const authService = {
         // representaEmpresa 'si'/'no' → tipo_persona 'EMPRESA'/'NATURAL'
         tipo_persona: datosRegistro.tipo_persona || (datosRegistro.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL'),
         password: datosRegistro.password,
+        // Trámites/áreas seleccionados en el registro inicial
+        tramites_solicitados: Array.isArray(datosRegistro.tramites_solicitados)
+          ? datosRegistro.tramites_solicitados
+          : datosRegistro.formularios || [],
         // Opcionales del DTO
         ...(datosRegistro.provincia && { provincia: datosRegistro.provincia }),
         ...(datosRegistro.municipio && { municipio: datosRegistro.municipio }),
@@ -140,9 +144,9 @@ export const authService = {
           .join('')
       );
       const payload = JSON.parse(jsonPayload);
+      // Getter puro: NO limpia sesión ni redirige. La limpieza la hace el guard
+      // del router (router/index.js) y el interceptor 401 (config/api.js).
       if (payload.exp && Date.now() >= payload.exp * 1000) {
-        // Token expirado -> limpiar
-        this.logout();
         return false;
       }
       return true;

@@ -207,6 +207,7 @@ export class AuthService {
     representaEmpresa?: string;
     nit?: string;
     formularioARegistrar?: string;
+    tramites_solicitados?: string[] | string;
     password?: string;
   }) {
     const ci = data.cedula || data.ci|| '';
@@ -215,6 +216,14 @@ export class AuthService {
     const telefono = String(data.celular || data.telefono || '');
     const departamento = data.departamento || '';
     const tipo_persona = data.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL';
+    const tramitesRaw = Array.isArray(data.tramites_solicitados)
+      ? data.tramites_solicitados
+      : data.formularioARegistrar
+        ? [data.formularioARegistrar]
+        : [];
+    const tramites_solicitados = tramitesRaw
+      .filter((t) => typeof t === 'string' && t.trim() !== '')
+      .map((t) => t.trim());
 
     if (!email || !ci) {
       throw new BadRequestException('El correo y la cédula son obligatorios');
@@ -243,12 +252,13 @@ export class AuthService {
           tipo_persona,
           password_hash,
           verificado: true,
+          tramites_solicitados,
         },
       });
     } else {
       await this.prisma.usuario.update({
         where: { id: user.id },
-        data: { password_hash }
+        data: { password_hash, tramites_solicitados }
       });
     }
 
@@ -435,5 +445,46 @@ export class AuthService {
     } catch (error) {
       throw new BadRequestException('El enlace de recuperación ha expirado o es inválido.');
     }
+  }
+
+  // 5. Perfil del usuario autenticado (sin datos sensibles)
+  async getPerfil(usuarioId: number) {
+    if (!usuarioId) {
+      throw new UnauthorizedException('No se pudo identificar al usuario');
+    }
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        ci: true,
+        nombre_completo: true,
+        email: true,
+        telefono: true,
+        departamento: true,
+        tipo_persona: true,
+        tramites_solicitados: true,
+        role: true,
+      },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const tramites = Array.isArray(usuario.tramites_solicitados)
+      ? usuario.tramites_solicitados
+      : [];
+
+    return {
+      id: usuario.id,
+      ci: usuario.ci,
+      nombreCompleto: usuario.nombre_completo,
+      email: usuario.email,
+      telefono: usuario.telefono,
+      departamento: usuario.departamento,
+      tipoPersona: usuario.tipo_persona,
+      tramitesSolicitados: tramites,
+      role: usuario.role,
+    };
   }
 }

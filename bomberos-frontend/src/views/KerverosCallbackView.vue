@@ -18,9 +18,13 @@ const steps = [
   { id: 'completado', label: 'Redirigiendo al dashboard', icon: '✅' }
 ];
 
-onMounted(async () => {
-  const token = route.query.token;
-  
+// D2: el intercambio solo valida el token contra el backend (/auth/kerveros/exchange).
+// No inventar validación JWKS local: eso es la sesión D1 (bloqueada).
+// El token mock usa iss 'kerveros-dev.policia.bo' (temporal); en G-R este flujo
+// migrará a la tabla SESIONES (token_hash, ip_address, user_agent, estado).
+const procesarCallback = async () => {
+  const token = route.query.token || localStorage.getItem('kerverosToken');
+
   if (!token) {
     error.value = 'No se recibió token de Kerveros';
     step.value = 'error';
@@ -37,18 +41,20 @@ onMounted(async () => {
     // Paso 2: Intercambiando
     step.value = 'intercambiando';
     progress.value = 60;
-    
+
     const response = await kerverosService.exchangeKerverosToken(token);
-    
+
     // Paso 3: Completado
     step.value = 'completado';
     progress.value = 100;
     success.value = true;
-    
+
     await new Promise(r => setTimeout(r, 800));
-    
-    // Redirigir al dashboard admin
-    router.push('/admin/dashboard');
+
+    // Redirigir según rol: INTERNO/ADMIN a dashboard admin, resto a formularios
+    const role = response?.user?.role || 'EXTERNO';
+    const destino = (role === 'INTERNO' || role === 'ADMIN') ? '/admin/dashboard' : '/admin/formularios';
+    router.push(destino);
   } catch (err) {
     step.value = 'error';
     progress.value = 0;
@@ -57,6 +63,10 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+};
+
+onMounted(() => {
+  procesarCallback();
 });
 
 const getStepStatus = (stepId) => {
@@ -77,7 +87,7 @@ const retry = () => {
   progress.value = 0;
   loading.value = true;
   // Reintentar con el mismo token
-  onMounted();
+  procesarCallback();
 };
 </script>
 

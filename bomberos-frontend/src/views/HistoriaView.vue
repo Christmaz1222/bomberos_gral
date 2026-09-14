@@ -18,7 +18,7 @@
           <span class="text-[20px] font-bold text-red-600">Fundación Histórica</span>
           <h3 class="text-base font-bold text-slate-900 mt-0.5">Orígenes de la Unidad de Bomberos</h3>
           <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-            El primer cuerpo de Bomberos de Bolivia, fue creado el 4 de abril de 1875, en al ciudad Portuaria de Antofagasta a consecuencia de un incendio de proporciones que se produjo en la ciudad citada el 2 de abril del mismo año a horas 11:00 de la mañana.
+            El primer cuerpo de Bomberos de Bolivia, fue creado el 4 de abril de 1875, en la ciudad Portuaria de Antofagasta a consecuencia de un incendio de proporciones que se produjo en la ciudad citada el 2 de abril del mismo año a horas 11:00 de la mañana.
           </p>
         </div>
         <div class="hidden md:block w-[45%]"></div>
@@ -31,7 +31,7 @@
           <span class="text-[20px] font-bold text-red-600">Misión Institucional</span>
           <h3 class="text-base font-bold text-slate-900 mt-0.5">Integración Profesional</h3>
           <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-            Es un organismo especializado de la Policia Boliviana, encargado de administrar, planificar, coordinar, supervisar, investigar, fiscalizar y ejecutar medidas preventivas y operativas de auxilio en incidentes, emergencias y desastres con la premisa "Ante todo salvar vidas".
+            Es un organismo especializado de la Policía Boliviana, encargado de administrar, planificar, coordinar, supervisar, investigar, fiscalizar y ejecutar medidas preventivas y operativas de auxilio en incidentes, emergencias y desastres con la premisa "Ante todo salvar vidas".
           </p>
         </div>
       </div>
@@ -42,29 +42,29 @@
           <span class="text-[20px] font-bold text-red-600">Visión Institucional</span>
           <h3 class="text-base font-bold text-slate-900 mt-0.5">Proyección de la Dirección</h3>
           <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-            Ser el organismo lider a nivel nacional en rpevención y protección e la vida, atención de incidentes, emergencias y desastres, investigación de incendios y explosivos; con reconocimiento internacional a través de profesionales formados en conocimiento técnico, cientifico y con capacidad operativa.
+            Ser el organismo líder a nivel nacional en prevención y protección de la vida, atención de incidentes, emergencias y desastres, investigación de incendios y explosivos; con reconocimiento internacional a través de profesionales formados en conocimiento técnico, científico y con capacidad operativa.
           </p>
         </div>
         <div class="hidden md:block w-[45%]"></div>
       </div>
 
-      <div class="max-w-4xl mx-auto px-6 py-12">
-    <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold text-slate-900">Nuestra Historia</h1>
-      <p class="text-slate-500 mt-2 text-sm">Reseña institucional de la Dirección Nacional de Bomberos</p>
-    </div>
-
-    <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-200/60 bg-black">
-      <iframe 
-        class="w-full h-full"
-        src="https://www.youtube.com/embed/ID_DE_TU_VIDEO" 
-        title="Historia Dirección Nacional de Bomberos" 
-        frameborder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-        allowfullscreen>
-      </iframe>
-    </div>
-  </div>
+      <div class="pt-8">
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-slate-900">Reseña Institucional</h2>
+          <p class="text-slate-500 mt-1 text-sm">Video institucional de la Dirección Nacional de Bomberos</p>
+        </div>
+        <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-200/60 bg-black">
+          <!-- TODO(G-R/D1): colocar el ID real del video de YouTube cuando esté disponible -->
+          <iframe
+            class="w-full h-full"
+            src="about:blank"
+            title="Historia Dirección Nacional de Bomberos"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+      </div>
     </div>
   </div>
 </template>

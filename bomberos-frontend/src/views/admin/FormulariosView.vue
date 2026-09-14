@@ -3,7 +3,17 @@
     <AppHeader />
 
     <main class="container mx-auto p-6">
-      
+
+      <!-- Estado vacío defensivo: solo si no hay módulos disponibles -->
+      <div v-if="noHayContenido" class="text-center py-16 bg-white rounded-xl shadow border border-slate-200/60 px-6 mb-8">
+        <div class="text-5xl mb-4">📂</div>
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Aún no hay trámites disponibles</h2>
+        <p class="text-sm text-gray-500 mb-6 max-w-md mx-auto">Puede crear su registro profesional y solicitar sus credenciales de acceso desde el módulo de Registro Profesional.</p>
+        <div class="w-fit mx-auto">
+          <AppButton @click="router.push('/registro-profesional')">Ir a Registro Profesional</AppButton>
+        </div>
+      </div>
+
       <!-- SECCIÓN SIPPCI -->
       <div class="mb-12">
         <h1 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Módulos de Registro SIPPCI</h1>
@@ -91,13 +101,14 @@
           <button
             @click="buscarEmpresaJuridica"
             :disabled="cargando || empresaJuridica !== null"
+            :aria-busy="cargando"
             class="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded transition disabled:opacity-50"
           >
             {{ cargando ? 'Buscando...' : 'Buscar' }}
           </button>
         </div>
 
-        <p v-if="mensajeError" class="text-red-600 text-sm mb-4">{{ mensajeError }}</p>
+        <p v-if="mensajeError" role="alert" class="text-red-600 text-sm mb-4">{{ mensajeError }}</p>
 
         <div v-if="empresaJuridica" class="bg-green-50 border border-green-200 rounded p-4 mb-4">
           <p class="text-green-800"><strong>✓ Empresa Vinculada:</strong> {{ empresaJuridica.razon_social }}</p>
@@ -135,9 +146,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '../../components/AppHeader.vue';
+import AppButton from '../../components/AppButton.vue';
 
 const router = useRouter();
 
@@ -176,6 +188,14 @@ const turismoTerrestres = ref([
   { id: 't5', title: 'Exploración de Cuevas', route: '/admin/terrestres/cuevas' },
   { id: 't6', title: 'Senderismo', route: '/admin/terrestres/senderismo' }
 ]);
+
+// ESTADO VACÍO (defensivo: solo si no hay módulos disponibles)
+const noHayContenido = computed(() =>
+  formularios.value.length === 0 &&
+  turismoAereas.value.length === 0 &&
+  turismoAcuaticas.value.length === 0 &&
+  turismoTerrestres.value.length === 0
+);
 
 // LÓGICA DEL MODAL
 const mostrarModal = ref(false);

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Query, Req, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,6 +7,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto, VerifyOtpDto, RegisterDto, ResendOtpDto, KerverosExchangeDto } from './dto';
 
 @ApiTags('auth')
@@ -161,6 +162,40 @@ export class AuthController {
     const email = resendOtpDto.email || resendOtpDto.correo;
     console.log(`🔄 Resend OTP: ${email}`);
     return this.authService.resendOtp({ email });
+  }
+
+  // ============================================
+  // PERFIL DEL USUARIO AUTENTICADO
+  // ============================================
+
+  @Get('perfil')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Obtener datos base del usuario autenticado',
+    description: 'Retorna CI, nombre, correo, teléfono, departamento y tipo de persona del usuario con sesión activa.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Datos del perfil',
+    schema: {
+      example: {
+        id: 1,
+        ci: '1234567',
+        nombreCompleto: 'Juan Pérez Mamani',
+        email: 'usuario@example.com',
+        telefono: '71234567',
+        departamento: 'La Paz',
+        tipoPersona: 'NATURAL',
+        tramitesSolicitados: ['Registro de Profesionales'],
+        role: 'EXTERNO',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  async getPerfil(@Req() req: any) {
+    const usuario = await this.authService.getPerfil(req.user?.id);
+    return usuario;
   }
 
   // ============================================

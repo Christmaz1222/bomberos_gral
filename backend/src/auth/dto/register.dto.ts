@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, Length, IsIn, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, Length, IsIn, IsOptional, IsNotEmpty, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDto {
@@ -89,4 +89,14 @@ export class RegisterDto {
   @IsOptional()
   @IsString({ message: 'El área debe ser texto' })
   area?: string;
+
+  @ApiPropertyOptional({
+    description: 'Trámites o áreas de destino solicitados en el registro',
+    example: ['Registro de Profesionales', 'Capacitación'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray({ message: 'Los trámites solicitados deben ser un arreglo' })
+  @IsString({ each: true, message: 'Cada trámite debe ser texto' })
+  tramites_solicitados?: string[];
 }
