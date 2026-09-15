@@ -207,7 +207,7 @@ const procesarLogin = async () => {
       mostrarModal2FA.value = true
     } else if (resultado.token) {
       // Caso sin OTP (no esperado en fase 1 pero manejado)
-      router.push('/admin/formularios')
+      router.push('/mis-solicitudes')
     } else {
       errorLogin.value = resultado.message || 'Acceso denegado'
     }
@@ -241,7 +241,7 @@ const verificarCodigoOTP = async () => {
       text: 'Redirigiendo a sus formularios asignados.',
       confirmButtonColor: '#0f172a',
     })
-    router.push('/admin/formularios')
+    router.push('/mis-solicitudes')
   } catch (error) {
     console.error('Error OTP:', error)
     const msg = error.message || 'Código incorrecto'

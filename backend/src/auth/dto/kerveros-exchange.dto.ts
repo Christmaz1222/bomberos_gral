@@ -1,5 +1,5 @@
-import { IsString, IsNotEmpty, MinLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class KerverosExchangeDto {
   @ApiProperty({
@@ -11,4 +11,12 @@ export class KerverosExchangeDto {
   @IsNotEmpty({ message: 'El token de Kerveros es obligatorio' })
   @MinLength(10, { message: 'El token de Kerveros debe ser válido' })
   token: string;
+
+  @ApiPropertyOptional({
+    description: 'CI del funcionario (mock)',
+    example: '9905200',
+  })
+  @IsOptional()
+  @IsString()
+  ci?: string;
 }

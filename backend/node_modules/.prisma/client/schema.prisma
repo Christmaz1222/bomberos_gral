@@ -18,10 +18,12 @@ datasource db {
 enum EstadoSolicitud {
   BORRADOR
   PENDIENTE_PAGO
+  PAGO_CONFIRMADO
   COMPROBANTE_SUBIDO
   EN_VERIFICACION
   OBSERVADO
   APROBADO
+  INSPECCION
   CERTIFICADO_EMITIDO
   ANULADO
 }
@@ -53,12 +55,15 @@ model Usuario {
   updated_at           DateTime  @updatedAt
 
   // Relaciones simplificadas
-  solicitudes           Solicitud[]
-  codigos               CodigoVerificacion[]
-  notificaciones        Notificacion[]
-  sesiones              Sesion[]
-  usuarios_empresas     UsuarioEmpresa[]
-  historial_solicitudes HistorialSolicitud[]
+  solicitudes              Solicitud[]
+  codigos                  CodigoVerificacion[]
+  notificaciones           Notificacion[]
+  sesiones                 Sesion[]
+  usuarios_empresas        UsuarioEmpresa[]
+  historial_solicitudes    HistorialSolicitud[]
+  auditorias_general       AuditoriaGeneral[]
+  auditorias_cambios       AuditoriaCambios[]
+  renovaciones_solicitadas SolicitudRenovacion[]
 }
 
 // ============================================
@@ -85,6 +90,7 @@ model Empresa {
 
   solicitudes       Solicitud[]
   usuarios_empresas UsuarioEmpresa[]
+  renovaciones      SolicitudRenovacion[]
 }
 
 // ============================================
@@ -165,26 +171,40 @@ model Solicitud {
   documentos   DocumentoSolicitud[]
   respuestas   FormularioRespuesta[]
   historial    HistorialSolicitud[]
+
+  // G-Rb2: dominios específicos (JSON flexible por tipo de trámite)
+  sippci_datos         SippciDatos?
+  reglamentacion_datos ReglamentacionDatos?
+  turismo_datos        TurismoDatos?
+  capacitacion_datos   CapacitacionDatos?
 }
 
 // ============================================
 // 6. CERTIFICADOS DE HABILITACIÓN
 // ============================================
 model CertificadoHabilitacion {
-  id                Int        @id @default(autoincrement())
-  numero_registro   String     @unique @db.VarChar(50)
-  usuario_id        Int?
-  empresa_id        Int?
-  tipo_persona      String     @db.VarChar(20)
-  codigo_qr         String     @unique @db.VarChar(255)
-  fecha_emision     DateTime
-  fecha_vencimiento DateTime
-  estado            String     @default("VIGENTE") @db.VarChar(20)
-  solicitud_id      Int?
-  solicitud         Solicitud? @relation(fields: [solicitud_id], references: [id])
-  es_historico      Boolean    @default(false)
-  created_at        DateTime   @default(now())
-  updated_at        DateTime   @updatedAt
+  id                      Int        @id @default(autoincrement())
+  numero_registro         String     @unique @db.VarChar(50)
+  usuario_id              Int?
+  empresa_id              Int?
+  tipo_persona            String     @db.VarChar(20)
+  codigo_qr               String     @unique @db.VarChar(255)
+  fecha_emision           DateTime
+  fecha_vencimiento       DateTime
+  estado                  String     @default("VIGENTE") @db.VarChar(20)
+  solicitud_id            Int?
+  solicitud               Solicitud? @relation(fields: [solicitud_id], references: [id])
+  certificado_anterior_id Int?       @map("certificado_anterior_id")
+  created_at              DateTime   @default(now())
+  updated_at              DateTime   @updatedAt
+
+  // G-Rb2: cadena de renovación (self-reference) — sustituye a es_historico
+  certificadoAnterior    CertificadoHabilitacion?  @relation("CadenaRenovacion", fields: [certificado_anterior_id], references: [id])
+  certificadosSiguientes CertificadoHabilitacion[] @relation("CadenaRenovacion")
+
+  // G-Rb2: renovaciones (origen = este certificado; nuevo = emitido)
+  renovacionesOrigen SolicitudRenovacion[] @relation("RenovacionCertificadoAnterior")
+  renovacionesNuevas SolicitudRenovacion[] @relation("RenovacionCertificadoNuevo")
 }
 
 // ============================================
@@ -240,6 +260,7 @@ model DocumentoSolicitud {
   nombre_archivo  String    @map("nombre_archivo") @db.VarChar(255)
   ruta_archivo    String    @map("ruta_archivo") @db.VarChar(500)
   tipo_documento  String    @map("tipo_documento") @db.VarChar(30)
+  descripcion     String?   @map("descripcion") @db.VarChar(255)
   checksum        String?   @db.VarChar(128)
   fecha_subida    DateTime  @default(now()) @map("fecha_subida")
   created_at      DateTime  @default(now()) @map("created_at")
@@ -274,8 +295,8 @@ model Pago {
 // ============================================
 // G-Ra: USUARIOS INTERNOS (Personal DNB)
 // ============================================
-// NOTA: la relación con AuditoriaGeneral se agrega en G-Rb, cuando ese
-// modelo de dominio exista en el esquema.
+// G-Rb1: activadas las relaciones de auditoría (AuditoriaGeneral/Cambios)
+// y alertas (AlertaAdmin).
 
 model UsuarioInterno {
   id            Int      @id @default(autoincrement())
@@ -293,6 +314,9 @@ model UsuarioInterno {
   sesiones              Sesion[]
   historial_solicitudes HistorialSolicitud[]
   pagos_verificados     Pago[]               @relation("PagoVerificadoPor")
+  auditorias_general    AuditoriaGeneral[]
+  auditorias_cambios    AuditoriaCambios[]
+  alertas               AlertaAdmin[]
 
   @@map("usuarios_internos")
 }
@@ -382,4 +406,224 @@ model HistorialSolicitud {
   @@index([solicitud_id])
   @@index([created_at])
   @@map("historial_solicitudes")
+}
+
+// ============================================
+// G-Rb1: AUDITORIA_GENERAL
+// ============================================
+model AuditoriaGeneral {
+  id                 Int      @id @default(autoincrement())
+  usuario_id         Int?     @map("usuario_id")
+  usuario_interno_id Int?     @map("usuario_interno_id")
+  accion             String   @db.VarChar(100) // LOGIN, CREATE, UPDATE, DELETE, etc.
+  tabla_afectada     String?  @map("tabla_afectada") @db.VarChar(50)
+  registro_id        Int?     @map("registro_id")
+  ip_address         String?  @map("ip_address") @db.VarChar(45)
+  user_agent         String?  @map("user_agent") @db.Text
+  detalle            Json? // info extra (antes/después, errores, etc.)
+  fecha              DateTime @default(now())
+  created_at         DateTime @default(now()) @map("created_at")
+
+  usuario        Usuario?        @relation(fields: [usuario_id], references: [id])
+  usuarioInterno UsuarioInterno? @relation(fields: [usuario_interno_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([usuario_interno_id])
+  @@index([accion])
+  @@index([tabla_afectada, registro_id])
+  @@index([fecha])
+  @@map("auditoria_general")
+}
+
+// ============================================
+// G-Rb1: AUDITORIA_CAMBIOS
+// ============================================
+model AuditoriaCambios {
+  id                 Int      @id @default(autoincrement())
+  tabla              String   @db.VarChar(50)
+  registro_id        Int      @map("registro_id")
+  campo              String   @db.VarChar(100)
+  valor_anterior     String?  @map("valor_anterior") @db.Text
+  valor_nuevo        String?  @map("valor_nuevo") @db.Text
+  usuario_id         Int?     @map("usuario_id")
+  usuario_interno_id Int?     @map("usuario_interno_id")
+  fecha              DateTime @default(now())
+  created_at         DateTime @default(now()) @map("created_at")
+
+  usuario        Usuario?        @relation(fields: [usuario_id], references: [id])
+  usuarioInterno UsuarioInterno? @relation(fields: [usuario_interno_id], references: [id])
+
+  @@index([tabla, registro_id])
+  @@index([campo])
+  @@index([fecha])
+  @@map("auditoria_cambios")
+}
+
+// ============================================
+// G-Rb1: ALERTAS_ADMIN
+// ============================================
+model AlertaAdmin {
+  id         Int      @id @default(autoincrement())
+  admin_id   Int      @map("admin_id")
+  tipo       String   @db.VarChar(30) // VENCIMIENTO, INSPECCION, VALIDACION, SISTEMA
+  titulo     String   @db.VarChar(255)
+  mensaje    String   @db.Text
+  leida      Boolean  @default(false)
+  url_accion String?  @map("url_accion") @db.VarChar(255)
+  prioridad  String   @default("NORMAL") @db.VarChar(20) // BAJA, NORMAL, ALTA, CRITICA
+  created_at DateTime @default(now()) @map("created_at")
+
+  admin UsuarioInterno @relation(fields: [admin_id], references: [id])
+
+  @@index([admin_id, leida])
+  @@index([prioridad])
+  @@index([created_at])
+  @@map("alertas_admin")
+}
+
+// ============================================
+// G-Rb1: PARAMETROS_SISTEMA
+// ============================================
+model ParametroSistema {
+  id          Int      @id @default(autoincrement())
+  clave       String   @unique @db.VarChar(50)
+  valor       String?  @db.Text
+  descripcion String?  @db.Text
+  categoria   String?  @db.VarChar(50) // GENERAL, PAGOS, SEGURIDAD, NOTIFICACIONES
+  editable    Boolean  @default(true) // si se puede editar desde admin
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  @@index([categoria])
+  @@map("parametros_sistema")
+}
+
+// ============================================
+// G-Rb1: CACHE_CATALOGOS
+// ============================================
+model CacheCatalogo {
+  id                   Int       @id @default(autoincrement())
+  tabla_origen         String    @map("tabla_origen") @db.VarChar(50)
+  external_id          String?   @map("external_id") @db.VarChar(100)
+  datos                Json
+  fecha_sincronizacion DateTime  @default(now()) @map("fecha_sincronizacion")
+  fecha_expiracion     DateTime? @map("fecha_expiracion") // TTL para invalidar
+  version              Int       @default(1)
+  created_at           DateTime  @default(now()) @map("created_at")
+  updated_at           DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tabla_origen, external_id])
+  @@index([tabla_origen])
+  @@index([fecha_expiracion])
+  @@map("cache_catalogos")
+}
+
+// ============================================
+// G-Rb1: INTENTOS_LOGIN
+// ============================================
+model IntentoLogin {
+  id         Int      @id @default(autoincrement())
+  email      String   @db.VarChar(100)
+  ip_address String?  @map("ip_address") @db.VarChar(45)
+  exitoso    Boolean  @default(false)
+  user_agent String?  @map("user_agent") @db.Text
+  razon      String?  @db.VarChar(100) // INVALID_PASSWORD, USER_NOT_FOUND, etc.
+  fecha      DateTime @default(now())
+
+  @@index([email, fecha])
+  @@index([ip_address, fecha])
+  @@index([exitoso])
+  @@map("intentos_login")
+}
+
+// ============================================
+// G-Rb2: DOMINIO SIPPCI (M1)
+// ============================================
+model SippciDatos {
+  id                Int      @id @default(autoincrement())
+  solicitud_id      Int      @unique @map("solicitud_id")
+  tipo_persona      String   @map("tipo_persona") @db.VarChar(20) // NATURAL, JURIDICA
+  datos_especificos Json     @map("datos_especificos") // JSON flexible
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  solicitud Solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
+
+  @@map("sippci_datos")
+}
+
+// ============================================
+// G-Rb2: DOMINIO REGLAMENTACION
+// ============================================
+model ReglamentacionDatos {
+  id                Int      @id @default(autoincrement())
+  solicitud_id      Int      @unique @map("solicitud_id")
+  tipo_reglamento   String   @map("tipo_reglamento") @db.VarChar(50) // Ej: "RES_0259_24"
+  datos_especificos Json     @map("datos_especificos")
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  solicitud Solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
+
+  @@map("reglamentacion_datos")
+}
+
+// ============================================
+// G-Rb2: DOMINIO TURISMO (M3)
+// ============================================
+model TurismoDatos {
+  id                Int      @id @default(autoincrement())
+  solicitud_id      Int      @unique @map("solicitud_id")
+  tipo_actividad    String   @map("tipo_actividad") @db.VarChar(50) // AEREO, ACUATICO, TERRESTRE
+  datos_especificos Json     @map("datos_especificos")
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  solicitud Solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
+
+  @@map("turismo_datos")
+}
+
+// ============================================
+// G-Rb2: DOMINIO CAPACITACION
+// ============================================
+model CapacitacionDatos {
+  id                Int      @id @default(autoincrement())
+  solicitud_id      Int      @unique @map("solicitud_id")
+  tipo_capacitacion String   @map("tipo_capacitacion") @db.VarChar(50) // Ej: "BRIGADA", "PRIMEROS_AUXILIOS"
+  datos_especificos Json     @map("datos_especificos")
+  created_at        DateTime @default(now()) @map("created_at")
+  updated_at        DateTime @updatedAt @map("updated_at")
+
+  solicitud Solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade)
+
+  @@map("capacitacion_datos")
+}
+
+// ============================================
+// G-Rb2: SOLICITUDES_RENOVACION
+// ============================================
+model SolicitudRenovacion {
+  id                   Int      @id @default(autoincrement())
+  certificado_id       Int      @map("certificado_id") // Certificado a renovar
+  solicitante_id       Int      @map("solicitante_id") // Usuario que solicita
+  empresa_id           Int?     @map("empresa_id") // Empresa (si aplica)
+  fecha_solicitud      DateTime @default(now()) @map("fecha_solicitud")
+  documentos_adjuntos  Json?    @map("documentos_adjuntos")
+  comprobante_pago     String?  @map("comprobante_pago") @db.VarChar(255)
+  monto_pago           Decimal? @map("monto_pago") @db.Decimal(10, 2)
+  estado               String   @default("PENDIENTE") @db.VarChar(20)
+  nuevo_certificado_id Int?     @map("nuevo_certificado_id") // Certificado emitido
+  created_at           DateTime @default(now()) @map("created_at")
+  updated_at           DateTime @updatedAt @map("updated_at")
+
+  certificado      CertificadoHabilitacion  @relation("RenovacionCertificadoAnterior", fields: [certificado_id], references: [id])
+  nuevoCertificado CertificadoHabilitacion? @relation("RenovacionCertificadoNuevo", fields: [nuevo_certificado_id], references: [id])
+  solicitante      Usuario                  @relation(fields: [solicitante_id], references: [id])
+  empresa          Empresa?                 @relation(fields: [empresa_id], references: [id])
+
+  @@index([certificado_id])
+  @@index([solicitante_id])
+  @@index([estado])
+  @@map("solicitudes_renovacion")
 }

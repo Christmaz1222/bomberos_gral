@@ -55,6 +55,7 @@ export const authService = {
       // Si vino token directo (flujo sin OTP), guardar token y rol
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
+        localStorage.setItem('tipoUsuario', 'EXTERNO');
         if (response.data.user) {
           localStorage.setItem('user', JSON.stringify(response.data.user));
           const role = response.data.user.role || response.data.user.tipo_persona || 'EXTERNO';
@@ -77,6 +78,7 @@ export const authService = {
       // Guardar token y rol cuando la verificación es exitosa
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
+        localStorage.setItem('tipoUsuario', 'EXTERNO');
         if (response.data.user) {
           localStorage.setItem('user', JSON.stringify(response.data.user));
           const role = response.data.user.role || response.data.user.tipo_persona || 'EXTERNO';
@@ -172,5 +174,6 @@ export const authService = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('tipoUsuario');
   }
 };

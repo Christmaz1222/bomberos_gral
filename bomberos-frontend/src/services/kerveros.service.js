@@ -12,11 +12,12 @@ const MOCK_USERS = [
   {
     ci: '9905200',
     password: '123456',
-    nombre: 'CAP. JUAN PÉREZ MAMANI',
-    grado: 'CAPITÁN',
-    unidad: 'UNIDAD BOMBEROS LA PAZ',
-    email: 'jperez@policia.bo',
-    role: 'INTERNO'
+    nombre: 'ADMINISTRADOR SISTEMA DNB',
+    grado: 'ADMINISTRADOR',
+    unidad: 'DIRECCION NACIONAL DE BOMBEROS',
+    email: 'admin.dnb@bomberos.gob.bo',
+    external_id: 'DNB-ADMIN-001',
+    role: 'ADMIN'
   },
   {
     ci: '8812345',
@@ -85,23 +86,24 @@ export const kerverosService = {
   },
 
   // ============================================
-  // INTERCAMBIO DE TOKEN KERVEROS -> JWT BACKEND (Producción)
+  // INTERCAMBIO DE TOKEN KERVEROS -> JWT BACKEND
   // ============================================
   async exchangeKerverosToken(token) {
     try {
       const response = await apiClient.post('/auth/kerveros/exchange', { token });
-      
-      if (response.data.token && response.data.user) {
-        // Guardar sesión final (JWT del backend)
-        localStorage.setItem('token', response.data.token);
+
+      if (response.data.access_token && response.data.user) {
+        // Guardar sesión final (JWT interno del backend)
+        localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('userRole', response.data.user.role || 'INTERNO');
-        
+        localStorage.setItem('userRole', response.data.user.rol || 'INTERNO');
+        localStorage.setItem('tipoUsuario', response.data.user.tipo || 'INTERNO');
+
         // Limpiar datos temporales de Kerveros
         localStorage.removeItem('kerverosToken');
         localStorage.removeItem('kerverosUser');
       }
-      
+
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Error al intercambiar token con el backend' };
@@ -192,3 +194,56 @@ getMockUsers() {
   }));
 }
 };
+
+// ============================================
+// 3D: LOGIN MOCK PARA /admin/login (modo prueba)
+// ⚠️ Passwords SOLO en desarrollo. No usar en producción.
+// ============================================
+export async function loginMockKerveros(ci, password) {
+  const user = MOCK_USERS.find(u => u.ci === ci && u.password === password);
+  if (!user) {
+    throw new Error('Credenciales inválidas. Verifique su CI y contraseña.');
+  }
+
+  const token = generateMockKerberosToken(user);
+  const response = await apiClient.post('/auth/kerveros/exchange', { token });
+  return response.data;
+}
+
+// ============================================
+// EXCHANGE DE TOKEN KERVEROS (botón "Ingresar con Kerberos")
+// ============================================
+export async function exchangeKerverosToken(token) {
+  const response = await apiClient.post('/auth/kerveros/exchange', { token });
+  return response.data;
+}
+
+// ============================================
+// GENERAR TOKEN MOCK DE KERVEROS (Solo desarrollo)
+// ============================================
+export function generateMockKerberosToken(user) {
+  const payload = {
+    sub: user.ci,
+    ci: user.ci,
+    email: user.email,
+    nombre: user.nombre,
+    rol: user.role,
+    role: user.role,
+    external_id: user.external_id || `DNB-${user.ci}`,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  };
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = btoa(JSON.stringify(payload));
+  const signature = btoa('mock-signature-for-development');
+  return `${header}.${body}.${signature}`;
+}
+
+// ============================================
+// USUARIOS MOCK PÚBLICOS (sin password) para mostrar en UI
+// ============================================
+export const KERVEROS_MOCK_USERS_PUBLIC = MOCK_USERS.map(u => ({
+  ci: u.ci,
+  nombre: u.nombre,
+  rol: u.role,
+}));

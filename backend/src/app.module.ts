@@ -4,8 +4,12 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './prisma/prisma.module';
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
+import { SolicitudesModule } from './solicitudes/solicitudes.module';
+import { CertificadosModule } from './certificados/certificados.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -50,8 +54,12 @@ import { EmailModule } from './email/email.module';
       envFilePath: '.env',
     }),
     PrismaModule,
+    CommonModule,
     AuthModule,
     EmailModule,
+    SolicitudesModule,
+    CertificadosModule,
+    AdminModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 10,

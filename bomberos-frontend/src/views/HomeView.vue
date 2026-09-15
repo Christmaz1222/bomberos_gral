@@ -48,6 +48,14 @@ const seleccionarSeccion = (id) => {
         <p class="text-sm text-slate-300 mt-3 max-w-xl font-medium">
           Plataforma tecnológica institucional para la validación y seguimiento de trámites ciudadanos en tiempo real.
         </p>
+
+        <RouterLink
+          to="/admin/login"
+          class="mt-5 inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/20 hover:border-white/40 text-white text-sm font-semibold rounded-xl transition-all"
+        >
+          <span class="text-lg">🔐</span>
+          Ingresar como Funcionario
+        </RouterLink>
       </div>
     </div>
 

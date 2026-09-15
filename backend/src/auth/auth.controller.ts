@@ -5,6 +5,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -234,44 +235,42 @@ export class AuthController {
   @Get('kerveros/callback')
   @ApiOperation({
     summary: 'Callback de Kerberos/Kerveros SSO',
-    description: 'Recibe el token de Kerveros por query y redirige al dashboard interno.',
+    description: 'Recibe el token de Kerveros por query. Auto-registra UsuarioInterno y retorna JWT interno.',
   })
+  @ApiQuery({ name: 'token', required: true, description: 'JWT de Kerberos/Kerveros' })
   @ApiResponse({
     status: 200,
     description: 'Autenticación procesada (éxito o error)',
     schema: {
       example: {
         success: true,
-        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        user: { id: 5, email: 'interno@bomberos.gob.bo' },
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: { id: 5, email: 'interno@bomberos.gob.bo', rol: 'ADMIN', tipo: 'INTERNO' },
         redirectUrl: '/admin/dashboard',
       },
     },
   })
   async kerverosCallback(@Query('token') token: string) {
-    console.log(`🔐 Kerveros callback received`);
     if (!token) {
       return {
         success: false,
         message: 'Token de Kerveros no proporcionado',
-        redirectUrl: '/login?error=kerveros_token_missing',
+        redirectUrl: '/admin/login?error=kerveros_token_missing',
       };
     }
     try {
-      const result = await this.authService.exchangeKerverosToken(token);
-      // Devolver datos formateados para frontend con redirect
+      const result = await this.authService.kerverosCallback(token);
       return {
         success: true,
-        token: result.token,
+        access_token: result.access_token,
         user: result.user,
         redirectUrl: '/admin/dashboard',
       };
     } catch (error) {
-      console.error(`❌ Kerveros callback failed:`, (error as Error).message);
       return {
         success: false,
         message: (error as Error).message || 'Error al procesar token de Kerveros',
-        redirectUrl: '/login?error=kerveros_invalid',
+        redirectUrl: '/admin/login?error=kerveros_invalid',
       };
     }
   }

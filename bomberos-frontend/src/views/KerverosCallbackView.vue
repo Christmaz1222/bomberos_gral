@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { kerverosService } from '../services/kerveros.service.js';
+import apiClient from '../config/api';
 
 const router = useRouter();
 const route = useRoute();
@@ -18,10 +18,7 @@ const steps = [
   { id: 'completado', label: 'Redirigiendo al dashboard', icon: '✅' }
 ];
 
-// D2: el intercambio solo valida el token contra el backend (/auth/kerveros/exchange).
-// No inventar validación JWKS local: eso es la sesión D1 (bloqueada).
-// El token mock usa iss 'kerveros-dev.policia.bo' (temporal); en G-R este flujo
-// migrará a la tabla SESIONES (token_hash, ip_address, user_agent, estado).
+// 3D: el intercambio llama GET /auth/kerveros/callback con token por query
 const procesarCallback = async () => {
   const token = route.query.token || localStorage.getItem('kerverosToken');
 
@@ -33,33 +30,39 @@ const procesarCallback = async () => {
   }
 
   try {
-    // Paso 1: Validando
     step.value = 'validando';
     progress.value = 30;
     await new Promise(r => setTimeout(r, 500));
 
-    // Paso 2: Intercambiando
     step.value = 'intercambiando';
     progress.value = 60;
 
-    const response = await kerverosService.exchangeKerverosToken(token);
+    const { data } = await apiClient.get('/auth/kerveros/callback', { params: { token } });
 
-    // Paso 3: Completado
+    if (!data.access_token) {
+      throw new Error(data.message || 'Token inválido desde el backend');
+    }
+
+    // Guardar sesión interna
+    localStorage.setItem('token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('userRole', data.user.rol);
+    localStorage.setItem('tipoUsuario', 'INTERNO');
+    localStorage.removeItem('kerverosToken');
+
     step.value = 'completado';
     progress.value = 100;
     success.value = true;
 
     await new Promise(r => setTimeout(r, 800));
 
-    // Redirigir según rol: INTERNO/ADMIN a dashboard admin, resto a formularios
-    const role = response?.user?.role || 'EXTERNO';
-    const destino = (role === 'INTERNO' || role === 'ADMIN') ? '/admin/dashboard' : '/admin/formularios';
+    const role = data.user?.rol || 'INTERNO';
+    const destino = (role === 'INTERNO' || role === 'ADMIN') ? '/admin/dashboard' : '/mis-solicitudes';
     router.push(destino);
   } catch (err) {
     step.value = 'error';
     progress.value = 0;
-    error.value = err.message || 'Error al procesar el token de Kerveros';
-    console.error('Kerveros callback error:', err);
+    error.value = err.response?.data?.message || err.message || 'Error al procesar el token de Kerveros';
   } finally {
     loading.value = false;
   }
@@ -86,7 +89,6 @@ const retry = () => {
   step.value = 'validando';
   progress.value = 0;
   loading.value = true;
-  // Reintentar con el mismo token
   procesarCallback();
 };
 </script>

@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --color-dnb-primary: #C41E3A;
+  --color-dnb-dark: #1A3A5C;
+  --color-dnb-light: #F8F9FF;
+  --color-dnb-gray: #565E74;
+  --color-dnb-surface: #E5EEFF;
+  --color-dnb-container: #DC2626;
+  --color-dnb-success: #28A745;
+  --color-dnb-warning: #FD7E14;
+  --color-dnb-error: #BA1A1A;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 24;
+}

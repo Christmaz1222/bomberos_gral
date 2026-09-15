@@ -3,9 +3,18 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Servir archivos subidos (documentos y certificados generados)
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // Usar pino como logger global
   app.useLogger(app.get(Logger));
@@ -53,7 +62,9 @@ async function bootstrap() {
     .addTag('auth', 'Autenticación de usuarios')
     .addTag('usuarios', 'Gestión de usuarios')
     .addTag('solicitudes', 'Gestión de trámites')
+    .addTag('certificados', 'Certificados de habilitación (QR)')
     .addTag('catalogos', 'Catálogos del sistema')
+    .addTag('admin', 'Panel administrativo (dashboard, KPIs, alertas)')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

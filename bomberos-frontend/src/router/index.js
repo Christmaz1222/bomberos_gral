@@ -1,6 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // ==========================================
+// IMPORTAR LAYOUTS
+// ==========================================
+import AdminLayout from '../layouts/AdminLayout.vue'
+
+// ==========================================
 // IMPORTAR VISTAS PÚBLICAS
 // ==========================================
 import HomeView from '../views/HomeView.vue'
@@ -16,6 +21,14 @@ import RegistroProfesionalView from '../views/RegistroProfesionalView.vue'
 import KerverosLoginView from '../views/KerverosLoginView.vue'
 import KerverosDashboardView from '../views/KerverosDashboardView.vue'
 import KerverosCallbackView from '../views/KerverosCallbackView.vue'
+
+// ==========================================
+// IMPORTAR VISTAS CIUDADANO (HITO 10 - 3F2)
+// ==========================================
+import MisSolicitudesView from '../views/ciudadano/MisSolicitudesView.vue'
+import NuevaSolicitudView from '../views/ciudadano/NuevaSolicitudView.vue'
+import FormularioTramiteView from '../views/ciudadano/FormularioTramiteView.vue'
+import SolicitudCiudadanoDetalleView from '../views/ciudadano/SolicitudCiudadanoDetalleView.vue'
 
 // ==========================================
 // IMPORTAR VISTAS ADMIN
@@ -92,6 +105,7 @@ function clearSession() {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   localStorage.removeItem('userRole')
+  localStorage.removeItem('tipoUsuario')
 }
 
 // ==========================================
@@ -136,13 +150,116 @@ const routes = [
     meta: { public: true, requiresGuest: true } 
   },
 
-  // --- RUTAS ADMIN (PRIVADAS con roles) ---
-  { 
-    path: '/admin/dashboard', 
-    name: 'dashboard', 
-    component: () => import('../views/DashboardView.vue'), 
-    meta: { requiresAuth: true, roles: ['INTERNO', 'ADMIN', 'EXTERNO'] } 
+  // --- RUTAS CIUDADANO (HITO 10 - 3F2) ---
+  {
+    path: '/mis-solicitudes/nueva/:submoduloId',
+    name: 'FormularioTramite',
+    component: FormularioTramiteView,
+    meta: { requiresAuth: true, tipoUsuario: 'EXTERNO' },
   },
+  {
+    path: '/mis-solicitudes/nueva',
+    name: 'NuevaSolicitud',
+    component: NuevaSolicitudView,
+    meta: { requiresAuth: true, tipoUsuario: 'EXTERNO' },
+  },
+  {
+    path: '/mis-solicitudes/:codigo',
+    name: 'SolicitudCiudadanoDetalle',
+    component: SolicitudCiudadanoDetalleView,
+    meta: { requiresAuth: true, tipoUsuario: 'EXTERNO' },
+  },
+  {
+    path: '/mis-solicitudes',
+    name: 'MisSolicitudes',
+    component: MisSolicitudesView,
+    meta: { requiresAuth: true, tipoUsuario: 'EXTERNO' },
+  },
+
+  // --- RUTAS ADMIN (PRIVADAS con roles) ---
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: () => import('../views/AdminLoginView.vue'),
+    meta: { requiresGuest: true },
+  },
+  // --- ADMIN PANEL (3E1): layout con sidebar/header ---
+  {
+    path: '/admin',
+    component: AdminLayout,
+    redirect: '/admin/dashboard',
+    meta: { requiresAuth: true, tipoUsuario: 'INTERNO' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: () => import('../views/admin/AdminDashboardView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN'] },
+      },
+      {
+        path: 'solicitudes',
+        name: 'AdminSolicitudes',
+        component: () => import('../views/admin/SolicitudesListView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN'] },
+      },
+      {
+        path: 'solicitudes/nueva',
+        name: 'AdminSolicitudNueva',
+        component: () => import('../views/admin/PlaceholderView.vue'),
+        props: { titulo: 'Nueva Solicitud', descripcion: 'Formulario de alta de solicitud. Se conectará a la API en 3E2.' },
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN'] },
+      },
+      {
+        path: 'solicitudes/:codigo',
+        name: 'AdminSolicitudDetalle',
+        component: () => import('../views/admin/SolicitudDetalleView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN'] },
+      },
+      {
+        path: 'alertas',
+        name: 'AdminAlertas',
+        component: () => import('../views/admin/AlertasView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN', 'SUPERVISOR'] },
+      },
+      {
+        path: 'certificados',
+        name: 'AdminCertificados',
+        component: () => import('../views/admin/CertificadosListView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN'] },
+      },
+      {
+        path: 'capacitaciones',
+        name: 'AdminCapacitaciones',
+        component: () => import('../views/admin/PlaceholderView.vue'),
+        props: { titulo: 'Capacitaciones', descripcion: 'Gestión de cursos y talleres. Vista en construcción.' },
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN', 'SUPERVISOR'] },
+      },
+      {
+        path: 'reportes',
+        name: 'AdminReportes',
+        component: () => import('../views/admin/PlaceholderView.vue'),
+        props: { titulo: 'Reportes y Estadísticas', descripcion: 'Reportes operativos y estadísticas nacionales. Vista en construcción.' },
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN', 'SUPERVISOR', 'INSPECTOR', 'CAJERO'] },
+      },
+      {
+        path: 'usuarios-permisos',
+        name: 'AdminUsuariosPermisos',
+        component: () => import('../views/admin/PlaceholderView.vue'),
+        props: { titulo: 'Usuarios y Permisos', descripcion: 'Administración de usuarios internos y roles. Vista en construcción.' },
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['ADMIN'] },
+      },
+      {
+        path: 'configuracion-sippci',
+        name: 'AdminConfiguracionSippci',
+        component: () => import('../views/admin/PlaceholderView.vue'),
+        props: { titulo: 'Configuración SIPPCI', descripcion: 'Parámetros y configuración del sistema. Vista en construcción.' },
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['ADMIN'] },
+      },
+    ],
+  },
+  // ⚠️ DEPRECATED: Rutas mock del flujo ciudadano antiguo
+  // Se mantienen por compatibilidad pero serán eliminadas
+  // Los ciudadanos ahora usan /mis-solicitudes
   { 
     path: '/admin/formularios', 
     name: 'admin-formularios', 
@@ -220,35 +337,58 @@ router.beforeEach((to, from, next) => {
   const tokenExists = !!localStorage.getItem('token')
   const isAuthenticated = isTokenValid()
   const userRole = getUserRole()
+  const tipoUsuario = localStorage.getItem('tipoUsuario')
 
   // Si hay token pero está expirado/inválido -> limpiar sesión
   if (tokenExists && !isAuthenticated) {
     clearSession()
+    localStorage.removeItem('tipoUsuario')
   }
 
   // Si la ruta requiere autenticación y no está autenticado / token inválido o expirado
   if (to.meta.requiresAuth && !isAuthenticated) {
+    if (to.path.startsWith('/admin')) {
+      return next('/admin/login')
+    }
     return next('/login')
+  }
+
+  // CROSS-ROLE: Ciudadano (EXTERNO) intentando acceder a /admin → redirigir a su panel
+  if (to.path.startsWith('/admin') && isAuthenticated && tipoUsuario === 'EXTERNO') {
+    return next('/mis-solicitudes')
+  }
+
+  // CROSS-ROLE: Funcionario (INTERNO) intentando acceder a /mis-solicitudes → redirigir a admin
+  if (to.path.startsWith('/mis-solicitudes') && isAuthenticated && tipoUsuario !== 'EXTERNO') {
+    return next('/admin/dashboard')
   }
 
   // Verificación de roles en rutas /admin/* si está autenticado
   if (to.meta.requiresAuth && to.meta.roles && isAuthenticated) {
     if (userRole && !to.meta.roles.includes(userRole)) {
-      // Rol no autorizado -> redirigir según rol
       if (userRole === 'INTERNO' || userRole === 'ADMIN') {
         return next('/admin/dashboard')
       }
-      return next('/admin/formularios')
+      return next('/mis-solicitudes')
+    }
+  }
+
+  // Validar tipo de usuario para rutas admin internas (solo INTERNO)
+  if (to.path.startsWith('/admin') && to.meta.requiresAuth && isAuthenticated) {
+    if (tipoUsuario && tipoUsuario !== 'INTERNO') {
+      return next('/mis-solicitudes')
     }
   }
 
   // Si la ruta es solo para invitados (login/register) y ya está autenticado
   if (to.meta.requiresGuest && isAuthenticated) {
-    // Redirigir según rol: EXTERNO -> formularios, INTERNO/ADMIN -> dashboard
+    if (to.path.startsWith('/admin')) {
+      return next('/admin/dashboard')
+    }
     if (userRole === 'INTERNO' || userRole === 'ADMIN') {
       return next('/admin/dashboard')
     }
-    return next('/admin/formularios')
+    return next('/mis-solicitudes')
   }
 
   next()

@@ -1,0 +1,518 @@
+// ============================================================
+// SIPPCI V2.1 - SCHEMA CORREGIDO
+// Dirección Nacional de Bomberos - Policía Boliviana
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ESTADOS DE SOLICITUD (máquina de estados)
+// ============================================
+enum EstadoSolicitud {
+  BORRADOR
+  PENDIENTE_PAGO
+  COMPROBANTE_SUBIDO
+  EN_VERIFICACION
+  OBSERVADO
+  APROBADO
+  CERTIFICADO_EMITIDO
+  ANULADO
+}
+
+// ============================================
+// 1. USUARIOS EXTERNOS
+// ============================================
+model Usuario {
+  id                   Int       @id @default(autoincrement())
+  ci                   String    @unique @db.VarChar(20)
+  nombre_completo      String    @db.VarChar(200)
+  email                String    @unique @db.VarChar(100)
+  telefono             String    @db.VarChar(20)
+  password_hash        String    @db.VarChar(255)
+  tipo_persona         String    @db.VarChar(20)
+  departamento         String?   @db.VarChar(50)
+  provincia            String?   @db.VarChar(50)
+  municipio            String?   @db.VarChar(50)
+  area                 String?   @db.VarChar(50)
+  fecha_registro       DateTime  @default(now())
+  activo               Boolean   @default(true)
+  verificado           Boolean   @default(false)
+  ultimo_acceso        DateTime?
+  role                 String?   @default("EXTERNO") @db.VarChar(20)
+  grado                String?   @db.VarChar(50)
+  unidad               String?   @db.VarChar(100)
+  tramites_solicitados Json?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  // Relaciones simplificadas
+  solicitudes           Solicitud[]
+  codigos               CodigoVerificacion[]
+  notificaciones        Notificacion[]
+  sesiones              Sesion[]
+  usuarios_empresas     UsuarioEmpresa[]
+  historial_solicitudes HistorialSolicitud[]
+  auditorias_general    AuditoriaGeneral[]
+  auditorias_cambios    AuditoriaCambios[]
+}
+
+// ============================================
+// 2. EMPRESAS
+// ============================================
+model Empresa {
+  id                  Int       @id @default(autoincrement())
+  nit                 String    @unique @db.VarChar(20)
+  razon_social        String    @db.VarChar(200)
+  tipo_empresa        String?   @db.VarChar(50)
+  departamento        String?   @db.VarChar(50)
+  provincia           String?   @db.VarChar(50)
+  municipio           String?   @db.VarChar(50)
+  direccion           String?   @db.Text
+  telefono            String?   @db.VarChar(20)
+  email_institucional String?   @db.VarChar(100)
+  representante_id    Int?
+  estado              String    @default("PENDIENTE") @db.VarChar(20)
+  fecha_registro      DateTime  @default(now())
+  fecha_aprobacion    DateTime?
+  observacion         String?   @db.Text
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  solicitudes       Solicitud[]
+  usuarios_empresas UsuarioEmpresa[]
+}
+
+// ============================================
+// 3. CÓDIGOS DE VERIFICACIÓN (OTP)
+// ============================================
+model CodigoVerificacion {
+  id          Int       @id @default(autoincrement())
+  usuario_id  Int
+  codigo_hash String    @db.VarChar(255)
+  tipo        String    @db.VarChar(20)
+  intentos    Int       @default(0)
+  expira      DateTime
+  usado       Boolean   @default(false)
+  usado_at    DateTime?
+  created_at  DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([usuario_id, tipo, usado])
+}
+
+// ============================================
+// 4. MÓDULOS Y SUBMÓDULOS
+// ============================================
+model Modulo {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique @db.VarChar(50)
+  descripcion String?  @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  submodulos Submodulo[]
+}
+
+model Submodulo {
+  id           Int      @id @default(autoincrement())
+  modulo_id    Int
+  nombre       String   @db.VarChar(100)
+  descripcion  String?  @db.Text
+  tipo_persona String   @db.VarChar(20)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  modulo                Modulo                @relation(fields: [modulo_id], references: [id])
+  solicitudes           Solicitud[]
+  configuracion         ConfiguracionModulo?
+  formularios_respuesta FormularioRespuesta[]
+
+  @@unique([modulo_id, nombre])
+}
+
+// ============================================
+// 5. SOLICITUDES
+// ============================================
+model Solicitud {
+  id               Int             @id @default(autoincrement())
+  codigo           String          @unique @db.VarChar(50)
+  usuario_id       Int
+  empresa_id       Int?
+  submodulo_id     Int
+  tipo_persona     String          @db.VarChar(20)
+  estado           EstadoSolicitud @default(BORRADOR)
+  fecha_solicitud  DateTime        @default(now())
+  fecha_envio      DateTime?
+  fecha_aprobacion DateTime?
+  observacion      String?         @db.Text
+  ubicacion        Json?
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  usuario   Usuario   @relation(fields: [usuario_id], references: [id])
+  empresa   Empresa?  @relation(fields: [empresa_id], references: [id])
+  submodulo Submodulo @relation(fields: [submodulo_id], references: [id])
+
+  certificados CertificadoHabilitacion[]
+  pagos        Pago[]
+  documentos   DocumentoSolicitud[]
+  respuestas   FormularioRespuesta[]
+  historial    HistorialSolicitud[]
+}
+
+// ============================================
+// 6. CERTIFICADOS DE HABILITACIÓN
+// ============================================
+model CertificadoHabilitacion {
+  id                Int        @id @default(autoincrement())
+  numero_registro   String     @unique @db.VarChar(50)
+  usuario_id        Int?
+  empresa_id        Int?
+  tipo_persona      String     @db.VarChar(20)
+  codigo_qr         String     @unique @db.VarChar(255)
+  fecha_emision     DateTime
+  fecha_vencimiento DateTime
+  estado            String     @default("VIGENTE") @db.VarChar(20)
+  solicitud_id      Int?
+  solicitud         Solicitud? @relation(fields: [solicitud_id], references: [id])
+  es_historico      Boolean    @default(false)
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+}
+
+// ============================================
+// 7. NOTIFICACIONES
+// ============================================
+model Notificacion {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int
+  tipo       String   @db.VarChar(20)
+  titulo     String   @db.VarChar(255)
+  mensaje    String   @db.Text
+  leida      Boolean  @default(false)
+  fecha      DateTime @default(now())
+  url_accion String?  @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id, leida])
+}
+
+// ============================================
+// 8. RESPUESTAS DE FORMULARIO (datos del trámite)
+// ============================================
+model FormularioRespuesta {
+  id               Int       @id @default(autoincrement())
+  solicitud_id     Int
+  solicitud        Solicitud @relation(fields: [solicitud_id], references: [id])
+  datos_formulario Json
+  version          String    @default("1.0") @db.VarChar(20)
+  created_at       DateTime  @default(now())
+
+  // G-Ra: trazabilidad del formulario con el submódulo asociado
+  submodulo_id    Int?    @map("submodulo_id")
+  hash_integridad String? @map("hash_integridad") @db.VarChar(128)
+  hash_pdf        String? @map("hash_pdf") @db.VarChar(128)
+
+  submodulo Submodulo? @relation(fields: [submodulo_id], references: [id])
+
+  @@index([solicitud_id])
+  @@index([submodulo_id])
+}
+
+// ============================================
+// 9. DOCUMENTOS DE SOLICITUD
+// ============================================
+model DocumentoSolicitud {
+  id              Int       @id @default(autoincrement())
+  solicitud_id    Int
+  solicitud       Solicitud @relation(fields: [solicitud_id], references: [id])
+  nombre_original String    @map("nombre_original") @db.VarChar(255)
+  nombre_archivo  String    @map("nombre_archivo") @db.VarChar(255)
+  ruta_archivo    String    @map("ruta_archivo") @db.VarChar(500)
+  tipo_documento  String    @map("tipo_documento") @db.VarChar(30)
+  checksum        String?   @db.VarChar(128)
+  fecha_subida    DateTime  @default(now()) @map("fecha_subida")
+  created_at      DateTime  @default(now()) @map("created_at")
+
+  @@index([solicitud_id])
+  @@map("documentos_solicitudes")
+}
+
+// ============================================
+// 10. PAGOS
+// ============================================
+model Pago {
+  id                 Int             @id @default(autoincrement())
+  solicitud_id       Int
+  solicitud          Solicitud       @relation(fields: [solicitud_id], references: [id])
+  monto_ufv          Decimal?        @db.Decimal(12, 2)
+  monto_bs           Decimal?        @db.Decimal(12, 2)
+  codigo_orden       String          @unique @db.VarChar(50)
+  estado             String          @default("PENDIENTE") @db.VarChar(20)
+  comprobante_url    String?         @db.Text
+  verificado_por     Int?
+  verificador        UsuarioInterno? @relation("PagoVerificadoPor", fields: [verificado_por], references: [id])
+  fecha_verificacion DateTime?
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+
+  @@index([solicitud_id])
+  @@index([estado])
+  @@index([verificado_por])
+}
+
+// ============================================
+// G-Ra: USUARIOS INTERNOS (Personal DNB)
+// ============================================
+// G-Rb1: activadas las relaciones de auditoría (AuditoriaGeneral/Cambios)
+// y alertas (AlertaAdmin).
+
+model UsuarioInterno {
+  id            Int      @id @default(autoincrement())
+  external_id   String?  @unique @map("external_id") @db.VarChar(100)
+  nombre        String   @db.VarChar(200)
+  email         String   @unique @db.VarChar(100)
+  password_hash String   @map("password_hash") @db.VarChar(255)
+  rol           String   @db.VarChar(50)
+  permisos      Json?
+  activo        Boolean  @default(true)
+  created_at    DateTime @default(now()) @map("created_at")
+  updated_at    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones inversas
+  sesiones              Sesion[]
+  historial_solicitudes HistorialSolicitud[]
+  pagos_verificados     Pago[]               @relation("PagoVerificadoPor")
+  auditorias_general    AuditoriaGeneral[]
+  auditorias_cambios    AuditoriaCambios[]
+  alertas               AlertaAdmin[]
+
+  @@map("usuarios_internos")
+}
+
+// ============================================
+// G-Ra: SESIONES
+// ============================================
+model Sesion {
+  id                 Int      @id @default(autoincrement())
+  usuario_id         Int?     @map("usuario_id")
+  usuario_interno_id Int?     @map("usuario_interno_id")
+  token_hash         String   @unique @map("token_hash") @db.VarChar(255)
+  ip_address         String?  @map("ip_address") @db.VarChar(45)
+  user_agent         String?  @map("user_agent") @db.Text
+  fecha_expira       DateTime @map("fecha_expira")
+  // activo: soft-delete para revocación manual por admin o logout
+  // La vigencia temporal la define fecha_expira
+  activo             Boolean  @default(true)
+  created_at         DateTime @default(now()) @map("created_at")
+
+  usuario        Usuario?        @relation(fields: [usuario_id], references: [id])
+  usuarioInterno UsuarioInterno? @relation(fields: [usuario_interno_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([usuario_interno_id])
+  @@index([fecha_expira])
+  @@map("sesiones")
+}
+
+// ============================================
+// G-Ra: USUARIOS_EMPRESAS (N:N)
+// ============================================
+model UsuarioEmpresa {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int      @map("usuario_id")
+  empresa_id Int      @map("empresa_id")
+  relacion   String   @db.VarChar(30) // REPRESENTANTE, EMPLEADO, APODERADO
+  estado     String   @default("PENDIENTE") @db.VarChar(20)
+  created_at DateTime @default(now()) @map("created_at")
+  updated_at DateTime @updatedAt @map("updated_at")
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  empresa Empresa @relation(fields: [empresa_id], references: [id])
+
+  @@unique([usuario_id, empresa_id])
+  @@index([empresa_id])
+  @@map("usuarios_empresas")
+}
+
+// ============================================
+// G-Ra: CONFIGURACION_MODULOS
+// ============================================
+// Solo monto_ufv (tarifa en UFV) + monto_bs (equivalente en Bs calculado).
+// NO duplicar con el monto del pago real (Pago.monto_ufv / Pago.monto_bs).
+model ConfiguracionModulo {
+  id            Int      @id @default(autoincrement())
+  submodulo_id  Int      @unique @map("submodulo_id")
+  activo        Boolean  @default(true)
+  requiere_pago Boolean  @default(false) @map("requiere_pago")
+  monto_ufv     Decimal? @map("monto_ufv") @db.Decimal(10, 2) // Tarifa en UFV
+  monto_bs      Decimal? @map("monto_bs") @db.Decimal(10, 2) // Equivalente en Bs (calculado)
+  created_at    DateTime @default(now()) @map("created_at")
+  updated_at    DateTime @updatedAt @map("updated_at")
+
+  submodulo Submodulo @relation(fields: [submodulo_id], references: [id])
+
+  @@map("configuracion_modulos")
+}
+
+// ============================================
+// G-Ra: HISTORIAL_SOLICITUDES
+// ============================================
+model HistorialSolicitud {
+  id                 Int      @id @default(autoincrement())
+  solicitud_id       Int      @map("solicitud_id")
+  usuario_id         Int?     @map("usuario_id")
+  usuario_interno_id Int?     @map("usuario_interno_id")
+  estado_anterior    String?  @map("estado_anterior") @db.VarChar(20)
+  estado_nuevo       String   @map("estado_nuevo") @db.VarChar(20)
+  observacion        String?  @db.Text
+  created_at         DateTime @default(now()) @map("created_at")
+
+  solicitud      Solicitud       @relation(fields: [solicitud_id], references: [id])
+  usuario        Usuario?        @relation(fields: [usuario_id], references: [id])
+  usuarioInterno UsuarioInterno? @relation(fields: [usuario_interno_id], references: [id])
+
+  @@index([solicitud_id])
+  @@index([created_at])
+  @@map("historial_solicitudes")
+}
+
+// ============================================
+// G-Rb1: AUDITORIA_GENERAL
+// ============================================
+model AuditoriaGeneral {
+  id                 Int      @id @default(autoincrement())
+  usuario_id         Int?     @map("usuario_id")
+  usuario_interno_id Int?     @map("usuario_interno_id")
+  accion             String   @db.VarChar(100) // LOGIN, CREATE, UPDATE, DELETE, etc.
+  tabla_afectada     String?  @map("tabla_afectada") @db.VarChar(50)
+  registro_id        Int?     @map("registro_id")
+  ip_address         String?  @map("ip_address") @db.VarChar(45)
+  user_agent         String?  @map("user_agent") @db.Text
+  detalle            Json? // info extra (antes/después, errores, etc.)
+  fecha              DateTime @default(now())
+  created_at         DateTime @default(now()) @map("created_at")
+
+  usuario        Usuario?        @relation(fields: [usuario_id], references: [id])
+  usuarioInterno UsuarioInterno? @relation(fields: [usuario_interno_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([usuario_interno_id])
+  @@index([accion])
+  @@index([tabla_afectada, registro_id])
+  @@index([fecha])
+  @@map("auditoria_general")
+}
+
+// ============================================
+// G-Rb1: AUDITORIA_CAMBIOS
+// ============================================
+model AuditoriaCambios {
+  id                 Int      @id @default(autoincrement())
+  tabla              String   @db.VarChar(50)
+  registro_id        Int      @map("registro_id")
+  campo              String   @db.VarChar(100)
+  valor_anterior     String?  @map("valor_anterior") @db.Text
+  valor_nuevo        String?  @map("valor_nuevo") @db.Text
+  usuario_id         Int?     @map("usuario_id")
+  usuario_interno_id Int?     @map("usuario_interno_id")
+  fecha              DateTime @default(now())
+  created_at         DateTime @default(now()) @map("created_at")
+
+  usuario        Usuario?        @relation(fields: [usuario_id], references: [id])
+  usuarioInterno UsuarioInterno? @relation(fields: [usuario_interno_id], references: [id])
+
+  @@index([tabla, registro_id])
+  @@index([campo])
+  @@index([fecha])
+  @@map("auditoria_cambios")
+}
+
+// ============================================
+// G-Rb1: ALERTAS_ADMIN
+// ============================================
+model AlertaAdmin {
+  id         Int      @id @default(autoincrement())
+  admin_id   Int      @map("admin_id")
+  tipo       String   @db.VarChar(30) // VENCIMIENTO, INSPECCION, VALIDACION, SISTEMA
+  titulo     String   @db.VarChar(255)
+  mensaje    String   @db.Text
+  leida      Boolean  @default(false)
+  url_accion String?  @map("url_accion") @db.VarChar(255)
+  prioridad  String   @default("NORMAL") @db.VarChar(20) // BAJA, NORMAL, ALTA, CRITICA
+  created_at DateTime @default(now()) @map("created_at")
+
+  admin UsuarioInterno @relation(fields: [admin_id], references: [id])
+
+  @@index([admin_id, leida])
+  @@index([prioridad])
+  @@index([created_at])
+  @@map("alertas_admin")
+}
+
+// ============================================
+// G-Rb1: PARAMETROS_SISTEMA
+// ============================================
+model ParametroSistema {
+  id          Int      @id @default(autoincrement())
+  clave       String   @unique @db.VarChar(50)
+  valor       String?  @db.Text
+  descripcion String?  @db.Text
+  categoria   String?  @db.VarChar(50) // GENERAL, PAGOS, SEGURIDAD, NOTIFICACIONES
+  editable    Boolean  @default(true) // si se puede editar desde admin
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  @@index([categoria])
+  @@map("parametros_sistema")
+}
+
+// ============================================
+// G-Rb1: CACHE_CATALOGOS
+// ============================================
+model CacheCatalogo {
+  id                   Int       @id @default(autoincrement())
+  tabla_origen         String    @map("tabla_origen") @db.VarChar(50)
+  external_id          String?   @map("external_id") @db.VarChar(100)
+  datos                Json
+  fecha_sincronizacion DateTime  @default(now()) @map("fecha_sincronizacion")
+  fecha_expiracion     DateTime? @map("fecha_expiracion") // TTL para invalidar
+  version              Int       @default(1)
+  created_at           DateTime  @default(now()) @map("created_at")
+  updated_at           DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tabla_origen, external_id])
+  @@index([tabla_origen])
+  @@index([fecha_expiracion])
+  @@map("cache_catalogos")
+}
+
+// ============================================
+// G-Rb1: INTENTOS_LOGIN
+// ============================================
+model IntentoLogin {
+  id         Int      @id @default(autoincrement())
+  email      String   @db.VarChar(100)
+  ip_address String?  @map("ip_address") @db.VarChar(45)
+  exitoso    Boolean  @default(false)
+  user_agent String?  @map("user_agent") @db.Text
+  razon      String?  @db.VarChar(100) // INVALID_PASSWORD, USER_NOT_FOUND, etc.
+  fecha      DateTime @default(now())
+
+  @@index([email, fecha])
+  @@index([ip_address, fecha])
+  @@index([exitoso])
+  @@map("intentos_login")
+}

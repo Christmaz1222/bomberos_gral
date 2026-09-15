@@ -1,0 +1,1 @@
+export { EstadoSolicitud } from '@prisma/client';

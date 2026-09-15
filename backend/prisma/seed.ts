@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { PERMISOS_POR_ROL } from '../src/common/constants/permisos';
 
 const prisma = new PrismaClient();
 
@@ -156,6 +157,136 @@ async function main() {
       create: ui,
     });
     console.log(`  ✅ Usuario interno: ${ui.email} (${ui.rol})`);
+  }
+
+  // ============================================
+  // RBAC1: SEED — Permisos por rol
+  // ============================================
+
+  console.log('🌱 Sembrando permisos por rol (RBAC1)...');
+
+  const todosLosInternos = await prisma.usuarioInterno.findMany();
+
+  for (const usuario of todosLosInternos) {
+    const permisos = PERMISOS_POR_ROL[usuario.rol] || [];
+
+    await prisma.usuarioInterno.update({
+      where: { id: usuario.id },
+      data: {
+        permisos: permisos as any, // Array de strings, p. ej. ["solicitudes.read", ...]
+      },
+    });
+
+    console.log(`  ✅ ${usuario.email} (${usuario.rol}): ${permisos.length} permisos`);
+  }
+
+  // ============================================
+  // G-Rb1: SEED — Parámetros del sistema
+  // ============================================
+
+  console.log('🌱 Sembrando parámetros del sistema...');
+
+  const parametros = [
+    {
+      clave: 'VIGENCIA_CERTIFICADO_ANIOS',
+      valor: '2',
+      descripcion: 'Vigencia del certificado en años (Art. 13 Reglamento SIPPCI)',
+      categoria: 'GENERAL',
+      editable: false,
+    },
+    {
+      clave: 'UFV_VALOR_ACTUAL',
+      valor: '2.45',
+      descripcion: 'Valor de la UFV para cálculo de tarifas (actualizar diariamente)',
+      categoria: 'PAGOS',
+      editable: true,
+    },
+    {
+      clave: 'DIAS_ALERTA_VENCIMIENTO',
+      valor: '30',
+      descripcion: 'Días previos al vencimiento para generar alertas',
+      categoria: 'NOTIFICACIONES',
+      editable: true,
+    },
+    {
+      clave: 'MAX_INTENTOS_LOGIN',
+      valor: '5',
+      descripcion: 'Máximo de intentos fallidos de login antes de bloqueo temporal',
+      categoria: 'SEGURIDAD',
+      editable: true,
+    },
+    {
+      clave: 'MINUTOS_BLOQUEO_LOGIN',
+      valor: '15',
+      descripcion: 'Minutos de bloqueo tras exceder intentos',
+      categoria: 'SEGURIDAD',
+      editable: true,
+    },
+    {
+      clave: 'OTP_VIGENCIA_MINUTOS',
+      valor: '10',
+      descripcion: 'Minutos de vigencia del OTP',
+      categoria: 'SEGURIDAD',
+      editable: false,
+    },
+    {
+      clave: 'TAMANO_MAXIMO_DOCUMENTO_MB',
+      valor: '10',
+      descripcion: 'Tamaño máximo de documento subido en MB',
+      categoria: 'GENERAL',
+      editable: true,
+    },
+    {
+      clave: 'PROVEEDOR_PAGO_ACTIVO',
+      valor: 'LIBELULA',
+      descripcion: 'Proveedor de pagos activo (LIBELULA, BANCO_UNION, etc.)',
+      categoria: 'PAGOS',
+      editable: true,
+    },
+  ];
+
+  for (const param of parametros) {
+    await prisma.parametroSistema.upsert({
+      where: { clave: param.clave },
+      update: {},
+      create: param,
+    });
+    console.log(`  ✅ Parámetro: ${param.clave} = ${param.valor}`);
+  }
+
+  // ============================================
+  // G-N1b2b: SEED — Tarifas en ConfiguracionModulo
+  // ============================================
+
+  console.log('🌱 Sembrando tarifas de módulos...');
+
+  const submodulos = await prisma.submodulo.findMany({
+    include: { modulo: true },
+  });
+
+  const tarifasPorModulo: Record<string, { ufv: number; bs: number }> = {
+    'SIPPCI': { ufv: 20, bs: 49.0 },
+    'REGLAMENTACION': { ufv: 15, bs: 36.75 },
+    'TURISMO': { ufv: 10, bs: 24.5 },
+    'CAPACITACION': { ufv: 5, bs: 12.25 },
+  };
+
+  for (const sm of submodulos) {
+    const tarifa = tarifasPorModulo[sm.modulo.nombre.toUpperCase()];
+    if (tarifa) {
+      await prisma.configuracionModulo.upsert({
+        where: { submodulo_id: sm.id },
+        update: {},
+        create: {
+          submodulo_id: sm.id,
+          activo: true,
+          requiere_pago: true,
+          monto_ufv: tarifa.ufv,
+          monto_bs: tarifa.bs,
+        },
+      });
+      console.log(`  ✅ Tarifa: ${sm.nombre} = ${tarifa.ufv} UFV (${tarifa.bs} Bs)`);
+    }
   }
 }
 

@@ -7,6 +7,7 @@ import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
 import jwt from 'jsonwebtoken';
 import jwksClient from 'jwks-rsa';
+import { createHash } from 'crypto';
 
 interface KerverosPayload {
   ci: string;
@@ -40,94 +41,125 @@ export class AuthService {
   }
 
   // KERVEROS: Intercambio de token Kerveros por JWT interno
+  // (3D: ahora usa UsuarioInterno + Sesion + JWT tipo INTERNO con rol)
   async exchangeKerverosToken(kerverosToken: string) {
-    // 1. Validar token de Kerveros (simulado en desarrollo)
-    const kerverosPayload = await this.validateKerverosToken(kerverosToken);
+    return this.kerverosCallback(kerverosToken);
+  }
 
-    const { ci, nombre, grado, unidad, email } = kerverosPayload;
+  // ============================================
+  // 3D: CALLBACK KERVEROS (auto-registro, JWT interno, sesión)
+  // ============================================
+  async kerverosCallback(kerverosToken: string) {
+    // 1. Validar token Kerberos (mock o real por JWKS)
+    const payload = await this.validateKerverosToken(kerverosToken);
 
-    if (!ci || !email) {
-      throw new BadRequestException('Token de Kerveros inválido: faltan datos obligatorios (ci, email)');
+    if (!payload) {
+      throw new UnauthorizedException('Token Kerberos inválido');
     }
 
-    // 2. Buscar o crear usuario en base de datos
-    let usuario = await this.prisma.usuario.findFirst({
-      where: { OR: [{ ci }, { email }] },
+    const extra = payload as any;
+    const email = payload.email;
+    const nombre = payload.nombre || extra.name || 'Funcionario DNB';
+    const rol = extra.rol || payload.role || 'INSPECTOR';
+    const externalId = extra.external_id || String(extra.sub || payload.ci || '');
+
+    if (!email) {
+      throw new UnauthorizedException('Token Kerberos sin email');
+    }
+
+    // 2. Auto-registro: buscar o crear UsuarioInterno
+    let usuarioInterno = await this.prisma.usuarioInterno.findUnique({
+      where: { email },
     });
 
-    const datosActualizados = {
-      nombre_completo: nombre,
-      email,
-      ci,
-      grado: grado || null,
-      unidad: unidad || null,
-      tipo_persona: 'INTERNO', // Marcar como usuario interno
-      verificado: true,
-      activo: true,
-      ultimo_acceso: new Date(),
-    };
-
-    if (!usuario) {
-      // Crear nuevo usuario interno con contraseña aleatoria (no se usa para login Kerveros)
-      const salt = await bcrypt.genSalt(10);
-      const password_hash = await bcrypt.hash(`Kerveros_${Date.now()}_${Math.random().toString(36).slice(2)}`, salt);
-
-      usuario = await this.prisma.usuario.create({
+    if (!usuarioInterno) {
+      usuarioInterno = await this.prisma.usuarioInterno.create({
         data: {
-          ...datosActualizados,
-          password_hash,
-          telefono: '',
-          departamento: unidad || '',
+          email,
+          nombre,
+          external_id: externalId || null,
+          password_hash: '',
+          rol,
+          permisos: {},
+          activo: true,
         },
       });
-      console.log(`✅ Usuario INTERNO creado desde Kerveros: ${email} (CI: ${ci})`);
+      this.logger.log(`🆕 Usuario interno auto-registrado: ${email} (${rol})`);
     } else {
-      // Actualizar datos si cambiaron
-      await this.prisma.usuario.update({
-        where: { id: usuario.id },
-        data: datosActualizados,
+      usuarioInterno = await this.prisma.usuarioInterno.update({
+        where: { id: usuarioInterno.id },
+        data: {
+          nombre,
+          rol,
+          updated_at: new Date(),
+        },
       });
-      console.log(`🔄 Usuario INTERNO actualizado desde Kerveros: ${email} (CI: ${ci})`);
+      this.logger.log(`🔄 Usuario interno actualizado: ${email} (${rol})`);
     }
 
-    // 3. Emitir JWT propio con role: 'INTERNO'
-    const payload = {
-      sub: usuario.id,
-      email: usuario.email,
-      nombre: usuario.nombre_completo,
-      ci: usuario.ci,
-      tipo_persona: usuario.tipo_persona,
-      role: 'INTERNO',
-      grado: usuario.grado,
-      unidad: usuario.unidad,
-    };
+    if (!usuarioInterno.activo) {
+      throw new UnauthorizedException('Usuario inactivo');
+    }
 
-    const token = this.jwtService.sign(payload);
+    // 3. Generar JWT interno con rol y tipo INTERNO
+    const accessToken = this.jwtService.sign({
+      sub: usuarioInterno.id,
+      email: usuarioInterno.email,
+      nombre: usuarioInterno.nombre,
+      rol: usuarioInterno.rol,
+      role: usuarioInterno.rol,
+      ci: usuarioInterno.external_id,
+      tipo: 'INTERNO',
+    });
+
+    // 4. Registrar sesión (tabla Sesion — G-Ra)
+    // token_hash = sha256(jwt + nonce) para garantizar unicidad por login
+    const tokenHash = createHash('sha256')
+      .update(accessToken + Date.now().toString(36) + Math.random().toString(36).slice(2))
+      .digest('hex');
+    await this.prisma.sesion.create({
+      data: {
+        usuario_interno_id: usuarioInterno.id,
+        token_hash: tokenHash,
+        fecha_expira: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        activo: true,
+      },
+    });
+
+    this.logger.log(`✅ Login Kerberos: ${usuarioInterno.email} (${usuarioInterno.rol})`);
 
     return {
-      token,
+      message: 'Autenticación Kerberos exitosa',
+      access_token: accessToken,
       user: {
-        id: usuario.id,
-        email: usuario.email,
-        nombre: usuario.nombre_completo,
-        ci: usuario.ci,
-        tipo_persona: usuario.tipo_persona,
-        role: 'INTERNO',
-        grado: usuario.grado,
-        unidad: usuario.unidad,
+        id: usuarioInterno.id,
+        email: usuarioInterno.email,
+        nombre: usuarioInterno.nombre,
+        rol: usuarioInterno.rol,
+        tipo: 'INTERNO',
       },
     };
   }
 
   // Validación real del token Kerveros con verificación de firma JWKS
   private async validateKerverosToken(token: string): Promise<KerverosPayload> {
-    const jwksUrl = this.configService.get<string>('KERVEROS_JWKS_URL');
-    const issuer = this.configService.get<string>('KERVEROS_ISSUER');
-    const audience = this.configService.get<string>('KERVEROS_AUDIENCE');
+    // 3D: usar mock forzado si KERVEROS_MOCK_MODE=true (desarrollo local con JWKS real configurada)
+    const forceMock = this.configService.get<string>('KERVEROS_MOCK_MODE') === 'true';
+    const jwksUrl = forceMock ? '' : this.configService.get<string>('KERVEROS_JWKS_URL');
+    const issuer = forceMock ? '' : this.configService.get<string>('KERVEROS_ISSUER');
+    const audience = forceMock ? '' : this.configService.get<string>('KERVEROS_AUDIENCE');
 
     if (!jwksUrl || !this.jwksClientInstance) {
       this.logger.warn('⚠️ KERVEROS_JWKS_URL no configurada, modo MOCK');
-      const payload = this.jwtService.decode(token) as KerverosPayload | null;
+      // Normalizar base64 (btoa del frontend) a base64url para jwt.decode
+      const tokenUrlSafe = token
+        .split('.')
+        .map((part, idx) => {
+          if (idx >= 2) return part;
+          return part.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        })
+        .join('.');
+      const payload = this.jwtService.decode(tokenUrlSafe) as KerverosPayload | null;
       if (!payload) {
         throw new UnauthorizedException('Token de Kerveros inválido o malformado');
       }

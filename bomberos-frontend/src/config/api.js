@@ -71,4 +71,5 @@ axios.interceptors.response.use(
   }
 );
 
-export default API_URL;
+export { API_URL };
+export default apiClient;

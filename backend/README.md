@@ -96,3 +96,14 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Modo KERVEROS
+
+- **Desarrollo local**: `KERVEROS_MOCK_MODE=true` (sin JWKS real). El login admin
+  `/admin/login` decodifica el token en modo MOCK y auto-registra/actualiza usuarios
+  internos. Usuarios de prueba: CI `9905200` (ADMIN), `9905201` (INSPECTOR),
+  `9905202` (CAJERO), password `123456`.
+- **Producción**: `KERVEROS_MOCK_MODE=false` (con JWKS real de `KERVEROS_JWKS_URL`).
+  Requiere Kerberos de policia.bo funcional.
+
+> ⚠️ El modo MOCK es **solo para desarrollo local**. En producción debe ser `false`.
