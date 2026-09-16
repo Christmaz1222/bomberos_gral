@@ -136,13 +136,15 @@ const routes = [
     meta: { public: true, requiresGuest: true } 
   },
 
-  // --- RUTAS ADMIN (PRIVADAS con roles) ---
+  // --- RUTA LEGACY DASHBOARD (Temporal para ADMIN) ---
   { 
-    path: '/admin/dashboard', 
-    name: 'dashboard', 
+    path: '/admin/dashboard-legacy', 
+    name: 'dashboard-legacy', 
     component: () => import('../views/DashboardView.vue'), 
-    meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL', 'CAPACITOR'] } 
+    meta: { requiresAuth: true, roles: ['ADMIN'] } 
   },
+
+  // --- FORMULARIOS USUARIO EXTERNO (Mantenidos fuera del layout admin) ---
   { 
     path: '/admin/formularios', 
     name: 'admin-formularios', 
@@ -202,6 +204,154 @@ const routes = [
     name: 'alas-delta', 
     component: AlasdeltaView, 
     meta: { requiresAuth: true, roles: ['EXTERNO', 'ADMIN', 'OFICIAL', 'CAPACITOR'] } 
+  },
+
+  // --- RUTA PADRE /admin CON AdminDashboardLayout ---
+  {
+    path: '/admin',
+    component: () => import('../layouts/AdminDashboardLayout.vue'),
+    meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL', 'CAPACITOR'] },
+    children: [
+      // Panel Principal (reemplaza DashboardView viejo por AdminPanelView)
+      { 
+        path: 'dashboard', 
+        name: 'admin-dashboard', 
+        component: () => import('../views/admin/dashboard/AdminPanelView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL', 'CAPACITOR'] } 
+      },
+      // Solicitudes > SIPPCI
+      { 
+        path: 'solicitudes/sippci', 
+        name: 'admin-solicitudes-sippci', 
+        component: () => import('../views/admin/dashboard/SippciView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      // Solicitudes > SIPPCI > Reg. Profesionales
+      { 
+        path: 'solicitudes/sippci/profesionales', 
+        name: 'admin-sippci-profesionales', 
+        component: () => import('../views/admin/dashboard/ProfesionalesView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      { 
+        path: 'solicitudes/sippci/profesionales/natural', 
+        name: 'admin-sippci-profesionales-natural', 
+        redirect: { path: '/admin/solicitudes/sippci/profesionales', query: { tipo: 'Natural' } } 
+      },
+      { 
+        path: 'solicitudes/sippci/profesionales/juridica', 
+        name: 'admin-sippci-profesionales-juridica', 
+        redirect: { path: '/admin/solicitudes/sippci/profesionales', query: { tipo: 'Jurídica' } } 
+      },
+      // Solicitudes > SIPPCI > Cumplimiento
+      { 
+        path: 'solicitudes/sippci/cumplimiento/certificacion', 
+        name: 'admin-sippci-cumplimiento-certificacion', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      { 
+        path: 'solicitudes/sippci/cumplimiento/declaracion', 
+        name: 'admin-sippci-cumplimiento-declaracion', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      { 
+        path: 'solicitudes/sippci/cumplimiento/renovacion', 
+        name: 'admin-sippci-cumplimiento-renovacion', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      // Solicitudes > Reglamentación / Turismo
+      { 
+        path: 'solicitudes/reglamentacion', 
+        name: 'admin-solicitudes-reglamentacion', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      { 
+        path: 'solicitudes/turismo', 
+        name: 'admin-solicitudes-turismo', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      // Reportes
+      { 
+        path: 'reportes', 
+        name: 'admin-reportes', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'OFICIAL'] } 
+      },
+      // Capacitaciones
+      { 
+        path: 'capacitaciones', 
+        name: 'admin-capacitaciones', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'CAPACITOR'] } 
+      },
+      { 
+        path: 'capacitaciones/cursos', 
+        name: 'admin-capacitaciones-cursos', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'CAPACITOR'] } 
+      },
+      { 
+        path: 'capacitaciones/programar', 
+        name: 'admin-capacitaciones-programar', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'CAPACITOR'] } 
+      },
+      { 
+        path: 'capacitaciones/inscripciones', 
+        name: 'admin-capacitaciones-inscripciones', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'CAPACITOR'] } 
+      },
+      { 
+        path: 'capacitaciones/calificar', 
+        name: 'admin-capacitaciones-calificar', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'CAPACITOR'] } 
+      },
+      { 
+        path: 'capacitaciones/certificados', 
+        name: 'admin-capacitaciones-certificados', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN', 'CAPACITOR'] } 
+      },
+      // Usuarios
+      { 
+        path: 'usuarios/internos', 
+        name: 'admin-usuarios-internos', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN'] } 
+      },
+      { 
+        path: 'usuarios/externos', 
+        name: 'admin-usuarios-externos', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN'] } 
+      },
+      { 
+        path: 'usuarios/empresas', 
+        name: 'admin-usuarios-empresas', 
+        component: () => import('../views/admin/dashboard/EmpresasView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN'] } 
+      },
+      // Configuración / Auditoría
+      { 
+        path: 'configuracion', 
+        name: 'admin-configuracion', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN'] } 
+      },
+      { 
+        path: 'auditoria', 
+        name: 'admin-auditoria', 
+        component: () => import('../views/admin/PlaceholderView.vue'), 
+        meta: { requiresAuth: true, roles: ['ADMIN'] } 
+      },
+    ]
   },
 ]
 

@@ -31,21 +31,44 @@ Razón: Evitar confusión entre rutas del admin interno y del usuario externo.
 - [x] Limpieza de artefactos de agentes (.agents/.claude/.cursor/.devin) + postinstall eliminado — `backend/package.json:21` / `.gitignore`
 - [x] Proyecto sin historial formal de migraciones — crear baseline pendiente (nota: migración actual aplicada vía raw SQL por falta de baseline)
 
+## ✅ Completado — Panel Admin Frontend (2026-09-16)
+
+### Componentes reutilizables (4)
+- [x] StatCard.vue
+- [x] ModuleProgressBar.vue
+- [x] DataTable.vue
+- [x] SectionTitle.vue
+
+### Componentes admin (3)
+- [x] AdminSidebar.vue (con filtrado por rol)
+- [x] AdminHeader.vue (con búsqueda y perfil)
+- [x] AdminDashboardLayout.vue
+
+### Vistas admin (5)
+- [x] AdminPanelView.vue (Panel Principal)
+- [x] SippciView.vue
+- [x] ProfesionalesView.vue (con filtro por tipo)
+- [x] EmpresasView.vue (solo ADMIN)
+- [x] PlaceholderView.vue
+
+### Router
+- [x] 19 rutas nuevas con AdminDashboardLayout como padre
+- [x] Guards con filtrado por rol
+- [x] Ajuste de filtro por tipo en profesionales (natural/juridica)
+- [x] DashboardView viejo movido a /admin/dashboard-legacy
+
+### Servicios y composables
+- [x] usePermisos.js (3 roles: ADMIN, OFICIAL, CAPACITOR)
+- [x] dashboard.mock.service.js
+
 ## ⏳ Pendiente — Próximas fases
 
-- [ ] Frontend: componentes reutilizables (StatCard, DataTable, etc.)
-- [ ] Frontend: AdminSidebar con filtrado por rol
-- [ ] Backend: RolesGuard + JwtStrategy (protección de endpoints)
-- [ ] Backend: Mover formularios externos de /admin/* a /usuario/* — ver §1 arriba
-- [ ] Backend: Agregar tablas faltantes para módulos específicos
-
-### 2. ~~Agregar roles OFICIAL y CAPACITOR al backend~~ ✅ COMPLETADO 2026-09-16
-El backend actual solo tenía ADMIN, INTERNO, EXTERNO. Se agregó OFICIAL y CAPACITOR en:
-- [x] schema.prisma (enum Role)
-- [x] auth.service.ts (validación exchangeKerverosToken con whitelist)
-- [ ] RolesGuard en NestJS (validación de endpoints) — pendiente próxima fase
-- [x] Seeders de usuarios de prueba — `backend/prisma/seed.ts`
-
-### 3. Migrar usePermisos a Pinia
-Actualmente lee localStorage directamente. Cuando se implemente Pinia,
-migrar a un store centralizado.
+- [ ] Verificación E2E manual con los 3 roles (login y navegación)
+- [ ] Conectar backend real (reemplazar dashboard.mock.service.js por dashboard.service.js)
+- [ ] Mover formularios del EXTERNO de /admin/* a /usuario/*
+- [ ] Implementar RolesGuard + JwtStrategy en el backend
+- [ ] Agregar tablas faltantes para módulos específicos
+- [ ] Implementar vistas reales de solicitudes (con datos del backend)
+- [ ] Implementar ExpedienteView (detalle de solicitud)
+- [ ] Implementar certificados con QR
+- [ ] Migrar usePermisos a Pinia
