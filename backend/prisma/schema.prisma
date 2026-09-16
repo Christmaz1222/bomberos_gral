@@ -13,6 +13,16 @@ datasource db {
 }
 
 // ============================================
+// ENUMS — Roles del sistema (alineado con frontend: EXTERNO/ADMIN/OFICIAL/CAPACITOR)
+// ============================================
+enum Role {
+  EXTERNO
+  ADMIN
+  OFICIAL
+  CAPACITOR
+}
+
+// ============================================
 // 1. USUARIOS EXTERNOS
 // ============================================
 model Usuario {
@@ -31,7 +41,7 @@ model Usuario {
   activo          Boolean  @default(true)
   verificado      Boolean  @default(false)
   ultimo_acceso   DateTime?
-  role            String?  @default("EXTERNO") @db.VarChar(20)
+  role            Role     @default(EXTERNO)
   grado           String?  @db.VarChar(50)
   unidad          String?  @db.VarChar(100)
   created_at      DateTime @default(now())

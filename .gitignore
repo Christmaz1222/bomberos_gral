@@ -25,6 +25,12 @@ bomberos-frontend/.env.*
 !.vscode/extensions.json
 *.log
 
+# Artefactos de agentes
+.agents/
+.claude/
+.cursor/
+.devin/
+
 # Temp
 .temp
 .tmp

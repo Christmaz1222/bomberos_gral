@@ -28,13 +28,24 @@ export class AuthService {
     // 1. Validar token de Kerveros (simulado en desarrollo)
     const kerverosPayload = await this.validateKerverosToken(kerverosToken);
 
-    const { ci, nombre, grado, unidad, email } = kerverosPayload;
+    const { ci, nombre, grado, unidad, email, role } = kerverosPayload;
 
     if (!ci || !email) {
       throw new BadRequestException('Token de Kerveros inválido: faltan datos obligatorios (ci, email)');
     }
 
-    // 2. Buscar o crear usuario en base de datos
+    // 2. Validar role contra enum Role — fallback OFICIAL con warning para auditoría
+    const rolesValidos = ['ADMIN', 'OFICIAL', 'CAPACITOR'] as const;
+    const roleValidado = (rolesValidos as readonly string[]).includes(role as string)
+      ? (role as (typeof rolesValidos)[number])
+      : (() => {
+          if (role) {
+            console.warn(`⚠️ Role inválido recibido de Kerveros: "${role}". Fallback a OFICIAL.`);
+          }
+          return 'OFICIAL' as const;
+        })();
+
+    // 3. Buscar o crear usuario en base de datos
     let usuario = await this.prisma.usuario.findFirst({
       where: { OR: [{ ci }, { email }] },
     });
@@ -46,6 +57,7 @@ export class AuthService {
       grado: grado || null,
       unidad: unidad || null,
       tipo_persona: 'INTERNO', // Marcar como usuario interno
+      role: roleValidado,
       verificado: true,
       activo: true,
       ultimo_acceso: new Date(),
@@ -64,24 +76,24 @@ export class AuthService {
           departamento: unidad || '',
         },
       });
-      console.log(`✅ Usuario INTERNO creado desde Kerveros: ${email} (CI: ${ci})`);
+      console.log(`✅ Usuario INTERNO creado desde Kerveros: ${email} (CI: ${ci}) role=${roleValidado}`);
     } else {
-      // Actualizar datos si cambiaron
-      await this.prisma.usuario.update({
+      // Actualizar datos si cambiaron — reasigna para tener role actualizado
+      usuario = await this.prisma.usuario.update({
         where: { id: usuario.id },
         data: datosActualizados,
       });
-      console.log(`🔄 Usuario INTERNO actualizado desde Kerveros: ${email} (CI: ${ci})`);
+      console.log(`🔄 Usuario INTERNO actualizado desde Kerveros: ${email} (CI: ${ci}) role=${roleValidado}`);
     }
 
-    // 3. Emitir JWT propio con role: 'INTERNO'
+    // 4. Emitir JWT propio con role real de BD
     const payload = {
       sub: usuario.id,
       email: usuario.email,
       nombre: usuario.nombre_completo,
       ci: usuario.ci,
       tipo_persona: usuario.tipo_persona,
-      role: 'INTERNO',
+      role: usuario.role,
       grado: usuario.grado,
       unidad: usuario.unidad,
     };
@@ -96,7 +108,7 @@ export class AuthService {
         nombre: usuario.nombre_completo,
         ci: usuario.ci,
         tipo_persona: usuario.tipo_persona,
-        role: 'INTERNO',
+        role: usuario.role,
         grado: usuario.grado,
         unidad: usuario.unidad,
       },
