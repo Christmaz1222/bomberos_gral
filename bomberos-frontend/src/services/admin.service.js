@@ -91,6 +91,25 @@ export const adminService = {
     )
     return response
   },
+
+  /**
+   * FASE 2: Lista los requisitos de una solicitud con estado y progreso
+   */
+  async listarRequisitos(codigo) {
+    const { data } = await apiClient.get(`/admin/solicitudes/${codigo}/requisitos`)
+    return data
+  },
+
+  /**
+   * FASE 2: Actualiza el estado de un requisito (CUMPLIDO, OBSERVADO, PENDIENTE)
+   */
+  async actualizarRequisito(codigo, requisitoId, payload) {
+    const { data } = await apiClient.patch(
+      `/admin/solicitudes/${codigo}/requisitos/${requisitoId}`,
+      payload,
+    )
+    return data
+  },
 }
 
 export default adminService

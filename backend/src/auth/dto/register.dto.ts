@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, Length, IsIn, IsOptional, IsNotEmpty, IsArray } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, Length, IsIn, IsOptional, IsNotEmpty, IsArray, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDto {
@@ -48,15 +48,26 @@ export class RegisterDto {
   @MaxLength(100, { message: 'La contraseña no debe exceder 100 caracteres' })
   password: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Tipo de persona',
     example: 'NATURAL',
-    enum: ['NATURAL', 'EMPRESA'],
+    enum: ['NATURAL', 'JURIDICA', 'EMPRESA'],
+    default: 'NATURAL',
   })
-  @IsNotEmpty({ message: 'El tipo de persona es obligatorio' })
+  @IsOptional()
   @IsString({ message: 'El tipo de persona debe ser texto' })
-  @IsIn(['NATURAL', 'EMPRESA'], { message: 'El tipo de persona debe ser NATURAL o EMPRESA' })
-  tipo_persona: string;
+  @IsIn(['NATURAL', 'JURIDICA', 'EMPRESA'], {
+    message: 'El tipo de persona debe ser NATURAL, JURIDICA o EMPRESA',
+  })
+  tipo_persona?: string;
+
+  @ApiPropertyOptional({
+    description: 'Indica si el usuario representa a una empresa (compatibilidad legacy)',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'representaEmpresa debe ser booleano' })
+  representaEmpresa?: boolean;
 
   @ApiPropertyOptional({
     description: 'Departamento',

@@ -236,7 +236,8 @@ export class AuthService {
     celular?: string;
     telefono?: string;
     departamento?: string;
-    representaEmpresa?: string;
+    tipo_persona?: string;
+    representaEmpresa?: string | boolean;
     nit?: string;
     formularioARegistrar?: string;
     tramites_solicitados?: string[] | string;
@@ -247,7 +248,16 @@ export class AuthService {
     const email = data.correo || data.email || '';
     const telefono = String(data.celular || data.telefono || '');
     const departamento = data.departamento || '';
-    const tipo_persona = data.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL';
+    // FASE 3a-fix: guardar tipo_persona correctamente.
+    // - Prioridad al campo explícito tipo_persona (NATURAL | JURIDICA | EMPRESA)
+    // - Compatibilidad: representaEmpresa=true/'si' fuerza JURIDICA
+    // - Normalización: EMPRESA → JURIDICA para coherencia con el legacy
+    let tipo_persona = (data.tipo_persona || '').trim().toUpperCase() || 'NATURAL';
+    const representEmpresa =
+      data.representaEmpresa === true ||
+      String(data.representaEmpresa).toLowerCase() === 'si';
+    if (tipo_persona === 'EMPRESA') tipo_persona = 'JURIDICA';
+    if (representEmpresa && tipo_persona === 'NATURAL') tipo_persona = 'JURIDICA';
     const tramitesRaw = Array.isArray(data.tramites_solicitados)
       ? data.tramites_solicitados
       : data.formularioARegistrar

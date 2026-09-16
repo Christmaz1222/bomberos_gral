@@ -5,6 +5,17 @@ export const authService = {
   // Registro - mapea campos del formulario frontend al DTO del backend
   async register(datosRegistro) {
     try {
+      // FASE 3a-fix: tipo_persona explícito (NATURAL | JURIDICA | EMPRESA)
+      let tipoPersona = 'NATURAL'
+      if (datosRegistro.tipo_persona) {
+        tipoPersona = datosRegistro.tipo_persona
+      } else if (
+        datosRegistro.representaEmpresa === 'si' ||
+        datosRegistro.representaEmpresa === true
+      ) {
+        tipoPersona = 'JURIDICA'
+      }
+
       // Mapeo correcto: cedula→ci, correo→email, celular→telefono, nombreCompleto→nombre_completo
       const payload = {
         ci: datosRegistro.ci || datosRegistro.cedula || '',
@@ -12,8 +23,9 @@ export const authService = {
         email: datosRegistro.email || datosRegistro.correo || '',
         telefono: String(datosRegistro.telefono || datosRegistro.celular || ''),
         departamento: datosRegistro.departamento || '',
-        // representaEmpresa 'si'/'no' → tipo_persona 'EMPRESA'/'NATURAL'
-        tipo_persona: datosRegistro.tipo_persona || (datosRegistro.representaEmpresa === 'si' ? 'EMPRESA' : 'NATURAL'),
+        // tipo_persona explícito + señal de compatibilidad legacy
+        tipo_persona: tipoPersona,
+        representaEmpresa: tipoPersona === 'JURIDICA',
         password: datosRegistro.password,
         // Trámites/áreas seleccionados en el registro inicial
         tramites_solicitados: Array.isArray(datosRegistro.tramites_solicitados)

@@ -85,6 +85,9 @@
         </div>
       </header>
 
+      <!-- Checklist de requisitos del trámite -->
+      <RequisitosChecklist :codigo="codigo" @updated="cargar" />
+
       <!-- Grid principal -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Columna izquierda: Solicitante + Historial -->
@@ -329,6 +332,7 @@ import adminService from '../../services/admin.service'
 import { useToast } from '../../composables/useToast'
 import EstadoBadge from '../../components/admin/EstadoBadge.vue'
 import CambiarEstadoModal from '../../components/admin/CambiarEstadoModal.vue'
+import RequisitosChecklist from '../../components/admin/RequisitosChecklist.vue'
 
 const route = useRoute()
 const toast = useToast()

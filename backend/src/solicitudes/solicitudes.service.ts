@@ -58,7 +58,10 @@ export class SolicitudesService {
    */
   private async generarCodigo(moduloNombre: string, tipoPersona: string): Promise<string> {
     const anio = new Date().getFullYear();
-    const tipoCorto = tipoPersona === 'JURIDICA' ? 'PJ' : 'PN';
+    // FASE 3a-fix: JURIDICA o EMPRESA → PJ; resto → PN
+    const tipoNorm = tipoPersona.toUpperCase();
+    const tipoCorto =
+      tipoNorm === 'JURIDICA' || tipoNorm === 'EMPRESA' ? 'PJ' : 'PN';
 
     // Usar mapa de abreviaturas; fallback a substring si no está en el mapa
     const moduloUpper = moduloNombre.toUpperCase();
@@ -97,13 +100,24 @@ export class SolicitudesService {
       throw new BadRequestException('El submódulo está inactivo');
     }
 
-    // 2. Verificar empresa si es JURIDICA
-    if (dto.tipo_persona === 'JURIDICA' && !dto.empresa_id) {
-      throw new BadRequestException('Empresa requerida para persona jurídica');
+    // 2. FASE 3a-fix: normalizar tipo de persona (EMPRESA → JURIDICA para coherencia legacy)
+    const tipoPersona =
+      (dto.tipo_persona || 'NATURAL').toUpperCase() === 'EMPRESA'
+        ? 'JURIDICA'
+        : (dto.tipo_persona || 'NATURAL').toUpperCase();
+
+    // Empresa OPCIONAL: solo validar su existencia si se envía empresa_id
+    if (dto.empresa_id) {
+      const empresa = await this.prisma.empresa.findUnique({
+        where: { id: dto.empresa_id },
+      });
+      if (!empresa) {
+        throw new BadRequestException('Empresa no encontrada');
+      }
     }
 
-    // 3. Generar código único
-    const codigo = await this.generarCodigo(submodulo.modulo.nombre, dto.tipo_persona);
+    // 3. Generar código único (PN/PJ según tipo normalizado)
+    const codigo = await this.generarCodigo(submodulo.modulo.nombre, tipoPersona);
 
     // 4. Crear la solicitud
     const solicitud = await this.prisma.solicitud.create({
@@ -111,7 +125,7 @@ export class SolicitudesService {
         codigo,
         usuario_id: usuarioId,
         submodulo_id: dto.submodulo_id,
-        tipo_persona: dto.tipo_persona,
+        tipo_persona: tipoPersona,
         empresa_id: dto.empresa_id || null,
         estado: 'BORRADOR' as const,
         ubicacion: dto.ubicacion ?? undefined,
@@ -136,7 +150,7 @@ export class SolicitudesService {
       await this.guardarDatosDominio(
         solicitud.id,
         submodulo.modulo.nombre,
-        dto.tipo_persona,
+        tipoPersona,
         dto.datos_especificos,
       );
     }

@@ -385,6 +385,16 @@ export class AdminService {
       );
     }
 
+    // FASE 2: Validar que los requisitos obligatorios estén cumplidos antes de APROBADO o CERTIFICADO_EMITIDO
+    if (['APROBADO', 'CERTIFICADO_EMITIDO'].includes(estadoNuevo)) {
+      const requisitosCompletos = await this.verificarRequisitosCompletos(solicitud.id);
+      if (!requisitosCompletos) {
+        throw new BadRequestException(
+          'No se puede avanzar: hay requisitos obligatorios pendientes de validación',
+        );
+      }
+    }
+
     const fechaAprobacion =
       estadoNuevo === 'APROBADO' ? new Date() : solicitud.fecha_aprobacion;
 
@@ -516,5 +526,198 @@ export class AdminService {
       nombre_original: documento.nombre_original,
       tipo_documento: documento.tipo_documento,
     };
+  }
+
+  /**
+   * FASE 2: Lista los requisitos de una solicitud con su estado y progreso
+   */
+  async listarRequisitos(codigo: string) {
+    const solicitud = await this.prisma.solicitud.findUnique({
+      where: { codigo },
+      include: {
+        submodulo: true,
+      },
+    });
+
+    if (!solicitud) {
+      throw new NotFoundException(`Solicitud ${codigo} no encontrada`);
+    }
+
+    // Buscar requisitos aplicables: base (submodulo_id null) + específicos del submódulo
+    const requisitosAplicables = await this.prisma.requisito.findMany({
+      where: {
+        activo: true,
+        OR: [
+          { submodulo_id: null },
+          { submodulo_id: solicitud.submodulo_id },
+        ],
+      },
+      orderBy: { orden: 'asc' },
+    });
+
+    // Buscar requisitos ya creados para esta solicitud
+    const requisitosExistentes = await this.prisma.solicitudRequisito.findMany({
+      where: { solicitud_id: solicitud.id },
+      include: { documento: true, verificador: true },
+    });
+
+    // Auto-crear registros de SolicitudRequisito para requisitos aplicables que no existan
+    const idsExistentes = requisitosExistentes.map((r) => r.requisito_id);
+    const requisitosFaltantes = requisitosAplicables.filter(
+      (r) => !idsExistentes.includes(r.id),
+    );
+
+    if (requisitosFaltantes.length > 0) {
+      await this.prisma.solicitudRequisito.createMany({
+        data: requisitosFaltantes.map((r) => ({
+          solicitud_id: solicitud.id,
+          requisito_id: r.id,
+          estado: 'PENDIENTE',
+        })),
+      });
+    }
+
+    // Recargar con todos los requisitos
+    const resultado = await this.prisma.solicitudRequisito.findMany({
+      where: { solicitud_id: solicitud.id },
+      include: {
+        requisito: true,
+        documento: true,
+        verificador: { select: { id: true, nombre: true, rol: true } },
+      },
+      orderBy: { requisito: { orden: 'asc' } },
+    });
+
+    const cumplidos = resultado.filter((r) => r.estado === 'CUMPLIDO').length;
+    const obligatorios = resultado.filter((r) => r.requisito.obligatorio).length;
+    const obligatoriosCumplidos = resultado.filter(
+      (r) => r.requisito.obligatorio && r.estado === 'CUMPLIDO',
+    ).length;
+
+    return {
+      codigo,
+      requisitos: resultado.map((r) => ({
+        id: r.id,
+        codigo: r.requisito.codigo,
+        nombre: r.requisito.nombre,
+        descripcion: r.requisito.descripcion,
+        obligatorio: r.requisito.obligatorio,
+        orden: r.requisito.orden,
+        estado: r.estado,
+        observacion: r.observacion,
+        documento: r.documento
+          ? {
+              id: r.documento.id,
+              nombre_original: r.documento.nombre_original,
+              tipo_documento: r.documento.tipo_documento,
+              fecha_subida: r.documento.fecha_subida,
+            }
+          : null,
+        verificador: r.verificador,
+        fecha_verificacion: r.fecha_verificacion,
+      })),
+      progreso: {
+        cumplidos,
+        total: resultado.length,
+        obligatorios,
+        obligatoriosCumplidos,
+        completo: obligatorios > 0 && obligatoriosCumplidos === obligatorios,
+      },
+    };
+  }
+
+  /**
+   * FASE 2: Actualiza el estado de un requisito
+   */
+  async actualizarRequisito(
+    codigo: string,
+    requisitoId: number,
+    usuarioId: number,
+    dto: { estado: string; observacion?: string; documento_id?: number },
+  ) {
+    const solicitud = await this.prisma.solicitud.findUnique({
+      where: { codigo },
+    });
+
+    if (!solicitud) {
+      throw new NotFoundException(`Solicitud ${codigo} no encontrada`);
+    }
+
+    const requisito = await this.prisma.solicitudRequisito.findFirst({
+      where: {
+        id: requisitoId,
+        solicitud_id: solicitud.id,
+      },
+      include: { requisito: true },
+    });
+
+    if (!requisito) {
+      throw new NotFoundException('Requisito no encontrado en esta solicitud');
+    }
+
+    // Validar estado
+    if (!['PENDIENTE', 'CUMPLIDO', 'OBSERVADO'].includes(dto.estado)) {
+      throw new BadRequestException('Estado inválido');
+    }
+
+    const actualizado = await this.prisma.solicitudRequisito.update({
+      where: { id: requisitoId },
+      data: {
+        estado: dto.estado,
+        observacion: dto.observacion !== undefined ? dto.observacion : requisito.observacion,
+        documento_id: dto.documento_id !== undefined ? dto.documento_id : requisito.documento_id,
+        verificado_por: ['CUMPLIDO', 'OBSERVADO'].includes(dto.estado) ? usuarioId : null,
+        fecha_verificacion: ['CUMPLIDO', 'OBSERVADO'].includes(dto.estado) ? new Date() : null,
+      },
+      include: {
+        requisito: true,
+        documento: true,
+        verificador: { select: { id: true, nombre: true, rol: true } },
+      },
+    });
+
+    this.logger.log(
+      `✅ Requisito ${requisito.requisito.codigo} → ${dto.estado} (${codigo})`,
+    );
+
+    return actualizado;
+  }
+
+  /**
+   * FASE 2: Verifica si todos los requisitos obligatorios están cumplidos
+   */
+  async verificarRequisitosCompletos(solicitudId: number): Promise<boolean> {
+    // Asegurar que existan los requisitos creados
+    const solicitud = await this.prisma.solicitud.findUnique({
+      where: { id: solicitudId },
+      select: { submodulo_id: true },
+    });
+
+    if (!solicitud) return false;
+
+    const requisitosAplicables = await this.prisma.requisito.findMany({
+      where: {
+        activo: true,
+        obligatorio: true,
+        OR: [
+          { submodulo_id: null },
+          { submodulo_id: solicitud.submodulo_id },
+        ],
+      },
+    });
+
+    if (requisitosAplicables.length === 0) return true;
+
+    const idsObligatorios = requisitosAplicables.map((r) => r.id);
+
+    const cumplidos = await this.prisma.solicitudRequisito.count({
+      where: {
+        solicitud_id: solicitudId,
+        requisito_id: { in: idsObligatorios },
+        estado: 'CUMPLIDO',
+      },
+    });
+
+    return cumplidos === idsObligatorios.length;
   }
 }

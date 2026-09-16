@@ -15,7 +15,10 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiProperty,
+  ApiPropertyOptional,
 } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, MaxLength, IsInt } from 'class-validator';
 import type { Response } from 'express';
 import { AdminService } from './admin.service';
 import { QuerySolicitudesAdminDto, CambiarEstadoAdminDto } from './dto';
@@ -24,6 +27,24 @@ import { RolesGuard } from './guards/roles.guard';
 import { PermisosGuard } from '../common/guards/permisos.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { PERMISOS } from '../common/constants/permisos';
+
+export class ActualizarRequisitoDto {
+  @ApiProperty({ enum: ['PENDIENTE', 'CUMPLIDO', 'OBSERVADO'], example: 'CUMPLIDO' })
+  @IsString()
+  @IsNotEmpty()
+  estado: string;
+
+  @ApiPropertyOptional({ example: 'Documento verificado y conforme' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  observacion?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  documento_id?: number;
+}
 
 @ApiTags('admin')
 @ApiBearerAuth('access-token')
@@ -122,6 +143,44 @@ export class AdminController {
   async obtenerEstadosPermitidos(@Request() req, @Param('codigo') codigo: string) {
     const rol = req.user.rol || req.user.role || 'EXTERNO';
     return this.adminService.obtenerEstadosPermitidos(codigo, rol);
+  }
+
+  @Get('solicitudes/:codigo/requisitos')
+  @RequirePermissions(PERMISOS.SOLICITUDES_VIEW_REQUISITOS)
+  @ApiOperation({
+    summary: 'Listar requisitos y checklist de una solicitud',
+    description: 'Devuelve la lista de requisitos aplicables con su estado de validación y progreso.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de requisitos con progreso' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada' })
+  async listarRequisitos(@Param('codigo') codigo: string) {
+    return this.adminService.listarRequisitos(codigo);
+  }
+
+  @Patch('solicitudes/:codigo/requisitos/:id')
+  @RequirePermissions(PERMISOS.SOLICITUDES_VALIDATE_REQUISITOS)
+  @ApiOperation({
+    summary: 'Actualizar estado de un requisito (validar/observar)',
+    description: 'Permite marcar como CUMPLIDO, OBSERVADO o PENDIENTE.',
+  })
+  @ApiBody({ type: ActualizarRequisitoDto })
+  @ApiResponse({ status: 200, description: 'Requisito actualizado' })
+  @ApiResponse({ status: 400, description: 'Estado o datos inválidos' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para validar requisitos' })
+  @ApiResponse({ status: 404, description: 'Requisito o solicitud no encontrado' })
+  async actualizarRequisito(
+    @Request() req,
+    @Param('codigo') codigo: string,
+    @Param('id') id: string,
+    @Body() dto: ActualizarRequisitoDto,
+  ) {
+    const usuarioId = req.user.sub || req.user.id;
+    return this.adminService.actualizarRequisito(
+      codigo,
+      parseInt(id, 10),
+      usuarioId,
+      dto,
+    );
   }
 
   @Patch('solicitudes/:codigo/estado')

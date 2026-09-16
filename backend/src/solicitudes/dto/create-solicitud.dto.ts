@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsObject,
   IsNotEmpty,
+  IsIn,
   MaxLength,
 } from 'class-validator';
 
@@ -20,14 +21,17 @@ export class CreateSolicitudDto {
   @ApiProperty({
     description: 'Tipo de persona',
     example: 'NATURAL',
-    enum: ['NATURAL', 'JURIDICA'],
+    enum: ['NATURAL', 'JURIDICA', 'EMPRESA'],
   })
   @IsString()
   @IsNotEmpty()
+  @IsIn(['NATURAL', 'JURIDICA', 'EMPRESA'], {
+    message: 'El tipo de persona debe ser NATURAL, JURIDICA o EMPRESA',
+  })
   tipo_persona: string;
 
   @ApiPropertyOptional({
-    description: 'ID de la empresa (si tipo_persona = JURIDICA)',
+    description: 'ID de la empresa (opcional; se puede vincular después)',
     example: 1,
   })
   @IsOptional()

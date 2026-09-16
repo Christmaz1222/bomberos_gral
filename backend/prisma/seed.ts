@@ -41,6 +41,10 @@ const catalogo: ModuloSeed[] = [
         nombre: 'Cumplimiento SIPPCI',
         descripcion: 'Certificación de cumplimiento del SIPPCI (incluye declaración jurada) para personas naturales y jurídicas.',
       },
+      {
+        nombre: 'Declaración Jurada',
+        descripcion: 'Declaración Jurada Única para establecimientos — cumplimiento SIPPCI.',
+      },
     ],
   },
   {
@@ -287,6 +291,83 @@ async function main() {
       });
       console.log(`  ✅ Tarifa: ${sm.nombre} = ${tarifa.ufv} UFV (${tarifa.bs} Bs)`);
     }
+  }
+
+  // ============================================
+  // FASE 2: SEED — Requisitos base
+  // ============================================
+
+  console.log('🌱 Sembrando requisitos base...');
+
+  const REQUISITOS_BASE = [
+    {
+      codigo: 'FORMULARIO',
+      nombre: 'Formulario de solicitud',
+      descripcion: 'Formulario completo firmado por el solicitante',
+      tipo: 'DOCUMENTO',
+      obligatorio: true,
+      orden: 1,
+    },
+    {
+      codigo: 'PLANO_SIPPCI',
+      nombre: 'Plano SIPPCI',
+      descripcion: 'Plano de seguridad contra incendios según normas SIPPCI',
+      tipo: 'DOCUMENTO',
+      obligatorio: true,
+      orden: 2,
+    },
+    {
+      codigo: 'PLAN_EMERGENCIA',
+      nombre: 'Plan de emergencia',
+      descripcion: 'Plan de emergencia y evacuación aprobado',
+      tipo: 'DOCUMENTO',
+      obligatorio: true,
+      orden: 3,
+    },
+    {
+      codigo: 'LICENCIA',
+      nombre: 'Licencia de funcionamiento',
+      descripcion: 'Licencia municipal o autorización de funcionamiento',
+      tipo: 'DOCUMENTO',
+      obligatorio: true,
+      orden: 4,
+    },
+    {
+      codigo: 'CI',
+      nombre: 'Cédula de Identidad',
+      descripcion: 'Copia de la cédula de identidad del responsable',
+      tipo: 'DOCUMENTO',
+      obligatorio: true,
+      orden: 5,
+    },
+    {
+      codigo: 'BOLETA',
+      nombre: 'Boleta de depósito',
+      descripcion: 'Comprobante del depósito bancario realizado',
+      tipo: 'DOCUMENTO',
+      obligatorio: true,
+      orden: 6,
+    },
+  ];
+
+  for (const req of REQUISITOS_BASE) {
+    await prisma.requisito.upsert({
+      where: { codigo: req.codigo },
+      update: {
+        nombre: req.nombre,
+        descripcion: req.descripcion,
+        tipo: req.tipo,
+        obligatorio: req.obligatorio,
+        orden: req.orden,
+        activo: true,
+      },
+      create: {
+        ...req,
+        submodulo_id: null,
+        activo: true,
+      },
+    });
+    console.log(`  ✅ Requisito: ${req.codigo} (${req.nombre})`);
   }
 }
 
