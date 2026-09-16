@@ -17,8 +17,16 @@ const showCredentials = ref(false);
 // Verificar si ya hay sesión Kerveros activa
 onMounted(() => {
   const kerverosUser = kerverosService.getKerverosUserData();
-  if (kerverosUser) {
-    router.push('/auth/kerveros/dashboard');
+  // Solo redirigir si hay una sesión COMPLETA y VÁLIDA
+  // (con ci y token, no un objeto vacío o residual)
+  if (kerverosUser && kerverosUser.ci && kerverosUser.role) {
+    const kerverosToken = localStorage.getItem('kerverosToken');
+    if (kerverosToken) {
+      router.push('/auth/kerveros/dashboard');
+    }
+  } else {
+    // Limpiar cualquier residuo corrupto
+    kerverosService.logoutKerveros();
   }
 });
 
