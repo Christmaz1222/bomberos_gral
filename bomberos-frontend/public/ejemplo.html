@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { overscroll-behavior: none; }
+  ::-webkit-scrollbar { display: none; }
+  .hidden-view { display: none !important; }
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "bomberos-red": "#C8102E",
+        "bomberos-gold": "#F2A900",
+        "bomberos-navy": "#1E293B",
+        "bomberos-dark": "#0F172A",
+        "bomberos-light": "#F8FAFC",
+        "on-primary-fixed": "#410002",
+        "primary-fixed": "#ffdad6",
+        "on-secondary-container": "#586377",
+        "surface-variant": "#e0e3e5",
+        "secondary-fixed-dim": "#bcc7de",
+        "surface-container-low": "#f2f4f6",
+        "inverse-on-surface": "#eff1f3",
+        "on-error": "#ffffff",
+        "on-tertiary-container": "#f8f7ff",
+        "inverse-surface": "#2d3133",
+        "outline-variant": "#e6bdb8",
+        "on-surface": "#191c1e",
+        "on-secondary": "#ffffff",
+        "surface-container-lowest": "#ffffff",
+        "surface-container": "#eceef0",
+        "primary": "#b70011",
+        "secondary": "#545f73",
+        "surface-container-highest": "#e0e3e5",
+        "tertiary-container": "#2d68f0",
+        "surface-dim": "#d8dadc",
+        "error": "#ba1a1a",
+        "on-primary-container": "#fff6f5",
+        "on-tertiary-fixed-variant": "#003ea8",
+        "on-primary-fixed-variant": "#93000b",
+        "on-tertiary": "#ffffff",
+        "primary-fixed-dim": "#ffb4ab",
+        "surface-tint": "#bf0715",
+        "error-container": "#ffdad6",
+        "on-surface-variant": "#5c403c",
+        "on-secondary-fixed-variant": "#3c475a",
+        "on-primary": "#ffffff",
+        "secondary-container": "#d5e0f8",
+        "secondary-fixed": "#d8e3fb",
+        "tertiary": "#004ed0",
+        "surface-bright": "#f7f9fb",
+        "background": "#f7f9fb",
+        "primary-container": "#dc2626",
+        "on-tertiary-fixed": "#00174b",
+        "outline": "#916f6b",
+        "on-secondary-fixed": "#111c2d",
+        "tertiary-fixed-dim": "#b4c5ff",
+        "on-error-container": "#93000a",
+        "surface": "#f7f9fb",
+        "tertiary-fixed": "#dbe1ff",
+        "on-background": "#191c1e",
+        "surface-container-high": "#e6e8ea"
+      },
+      borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+      spacing: {
+        "gutter": "1.5rem", "space-xs": "0.25rem", "margin-mobile": "1rem",
+        "space-xl": "2rem", "space-md": "1rem", "margin": "2rem",
+        "space-sm": "0.5rem", "gutter-mobile": "0.75rem", "space-lg": "1.5rem"
+      },
+      fontFamily: {
+        "body-sm": ["Inter"], "headline-lg": ["Inter"], "title-sm": ["Inter"],
+        "display-lg": ["Inter"], "headline-sm": ["Inter"], "display-lg-mobile": ["Inter"],
+        "headline-lg-mobile": ["Inter"], "title-md": ["Inter"], "body-lg": ["Inter"],
+        "label-lg": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"],
+        "label-sm": ["Inter"], "body-md": ["Inter"]
+      },
+      fontSize: {
+        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+        "title-sm": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "700"}],
+        "headline-sm": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+        "title-md": ["16px", {"lineHeight": "22px", "fontWeight": "600"}],
+        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+        "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+        "headline-md": ["22px", {"lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600"}],
+        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+        "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}],
+        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+      }
+    }
+  }
+}
+</script>
+</head>
+<body class="bg-surface font-body-md text-body-md text-on-surface">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<aside class="fixed left-0 top-0 h-full w-72 bg-bomberos-navy text-white shadow-[0_1px_8px_rgba(0,0,0,0.08)] z-50 flex flex-col justify-between overflow-y-auto">
+  <div class="flex flex-col">
+    <!-- Logo -->
+    <div class="px-space-lg py-space-lg flex items-center gap-space-sm border-b border-white/10">
+      <div class="w-10 h-10 rounded-xl bg-bomberos-red flex items-center justify-center text-white shadow-md">
+        <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+      </div>
+      <div class="flex flex-col">
+        <span class="font-title-md text-title-md text-white tracking-tight leading-none">SIPPCI Admin</span>
+        <span class="font-label-sm text-label-sm text-bomberos-gold uppercase tracking-wider mt-space-xs">DNB - Policía Boliviana</span>
+      </div>
+    </div>
+
+    <!-- Navegación -->
+    <nav class="px-space-md flex flex-col gap-space-xs py-space-md">
+
+      <!-- Panel Principal -->
+      <a class="sidebar-item flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" data-path="panel-principal">
+        <span class="material-symbols-outlined text-[20px]">dashboard</span>
+        <span class="font-label-lg text-label-lg">Panel Principal</span>
+      </a>
+
+      <!-- Solicitudes -->
+      <div class="flex flex-col">
+        <div class="sidebar-toggle flex items-center justify-between px-space-md py-space-sm rounded-lg text-white/80 hover:bg-white/10 hover:text-white cursor-pointer select-none transition-colors" data-target="submenu-solicitudes">
+          <div class="flex items-center gap-space-sm">
+            <span class="material-symbols-outlined text-[20px]">assignment</span>
+            <span class="font-label-lg text-label-lg">Solicitudes</span>
+          </div>
+          <span class="material-symbols-outlined text-[18px] transition-transform chevron">expand_more</span>
+        </div>
+
+        <div id="submenu-solicitudes" class="hidden flex flex-col pl-space-lg pr-space-xs gap-space-xs mt-space-xs">
+
+          <!-- SIPPCI -->
+          <div class="flex flex-col">
+            <div class="sidebar-toggle-sippci flex items-center justify-between px-space-sm py-space-xs rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors cursor-pointer select-none" data-target="submenu-sippci">
+              <a class="sidebar-item font-body-md text-body-md flex-1" data-path="solicitudes-sippci">SIPPCI</a>
+              <div class="flex items-center gap-space-xs">
+                <span class="px-2 py-0 rounded-full bg-bomberos-red text-white font-label-sm text-label-sm">171</span>
+                <span class="material-symbols-outlined text-[16px] transition-transform chevron-sippci">expand_more</span>
+              </div>
+            </div>
+
+            <div id="submenu-sippci" class="hidden flex flex-col pl-space-md gap-space-xs my-space-xs">
+              <div class="flex flex-col">
+                <span class="font-label-sm text-label-sm text-bomberos-gold px-space-xs py-space-xs uppercase">Reg. Profesionales</span>
+                <div class="flex flex-col pl-space-sm gap-space-xs">
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="profesionales-todas">Todas</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="profesionales-natural">Persona Natural</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="profesionales-juridica">Persona Jurídica</a>
+                </div>
+              </div>
+              <div class="flex flex-col mt-space-xs">
+                <span class="font-label-sm text-label-sm text-bomberos-gold px-space-xs py-space-xs uppercase">Capacitación</span>
+                <div class="flex flex-col pl-space-sm gap-space-xs">
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="capacitacion-cursos">Cursos</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="capacitacion-programar">Programar Curso</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="capacitacion-inscripciones">Inscripciones</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="capacitacion-calificar">Calificar</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="capacitacion-certificados">Certificados</a>
+                </div>
+              </div>
+              <div class="flex flex-col mt-space-xs">
+                <span class="font-label-sm text-label-sm text-bomberos-gold px-space-xs py-space-xs uppercase">Cumplimiento</span>
+                <div class="flex flex-col pl-space-sm gap-space-xs">
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="cumplimiento-certificacion">Certificación</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="cumplimiento-declaracion-jurada">Declaración Jurada</a>
+                  <a class="sidebar-item font-body-sm text-body-sm text-white/60 hover:text-white py-space-xs cursor-pointer px-space-sm rounded" data-path="cumplimiento-renovacion">Renovación</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reglamentación -->
+          <a class="sidebar-item flex items-center justify-between px-space-sm py-space-xs rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" data-path="solicitudes-reglamentacion">
+            <span class="font-body-md text-body-md">Reglamentación</span>
+            <span class="px-2 py-0 rounded-full bg-bomberos-red text-white font-label-sm text-label-sm">45</span>
+          </a>
+
+          <!-- Turismo -->
+          <a class="sidebar-item flex items-center justify-between px-space-sm py-space-xs rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" data-path="solicitudes-turismo">
+            <span class="font-body-md text-body-md">Turismo</span>
+            <span class="px-2 py-0 rounded-full bg-bomberos-red text-white font-label-sm text-label-sm">28</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reportes -->
+      <a class="sidebar-item flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" data-path="reportes">
+        <span class="material-symbols-outlined text-[20px]">bar_chart</span>
+        <span class="font-label-lg text-label-lg">Reportes</span>
+      </a>
+
+      <!-- Usuarios -->
+      <div class="flex flex-col">
+        <div class="sidebar-toggle flex items-center justify-between px-space-md py-space-sm rounded-lg text-white/80 hover:bg-white/10 hover:text-white cursor-pointer select-none transition-colors" data-target="submenu-usuarios">
+          <div class="flex items-center gap-space-sm">
+            <span class="material-symbols-outlined text-[20px]">group</span>
+            <span class="font-label-lg text-label-lg">Usuarios</span>
+          </div>
+          <span class="material-symbols-outlined text-[18px] transition-transform chevron">expand_more</span>
+        </div>
+        <div id="submenu-usuarios" class="hidden flex flex-col pl-space-lg gap-space-xs mt-space-xs">
+          <a class="sidebar-item font-body-sm text-body-sm text-white/70 hover:text-white py-space-xs px-space-sm cursor-pointer rounded" data-path="usuarios-internos">Internos</a>
+          <a class="sidebar-item font-body-sm text-body-sm text-white/70 hover:text-white py-space-xs px-space-sm cursor-pointer rounded" data-path="usuarios-externos">Externos</a>
+          <a class="sidebar-item font-body-sm text-body-sm text-white/70 hover:text-white py-space-xs px-space-sm cursor-pointer rounded" data-path="usuarios-empresas">Empresas</a>
+        </div>
+      </div>
+
+      <!-- Configuración -->
+      <a class="sidebar-item flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" data-path="configuracion">
+        <span class="material-symbols-outlined text-[20px]">settings</span>
+        <span class="font-label-lg text-label-lg">Configuración</span>
+      </a>
+
+      <!-- Auditoría -->
+      <a class="sidebar-item flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors cursor-pointer" data-path="auditoria">
+        <span class="material-symbols-outlined text-[20px]">verified_user</span>
+        <span class="font-label-lg text-label-lg">Auditoría</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Widget Protocolo -->
+  <div class="p-space-md">
+    <div class="p-space-sm rounded-xl bg-bomberos-dark flex flex-col gap-space-xs border border-bomberos-gold/20">
+      <div class="flex items-center gap-space-xs text-bomberos-gold">
+        <span class="material-symbols-outlined text-[16px]">verified</span>
+        <span class="font-label-sm text-label-sm uppercase tracking-wide">Protocolo Vigente</span>
+      </div>
+      <span class="font-body-sm text-body-sm text-white/90">Normativa NFPA & IRAM v4.2.8</span>
+      <div class="flex items-center justify-between mt-space-xs">
+        <span class="font-label-sm text-label-sm text-white/50">v4.2.8</span>
+        <span class="px-2 py-0 rounded-full bg-bomberos-gold text-bomberos-dark font-label-sm text-label-sm font-bold">Oficial</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONTENIDO PRINCIPAL
+═══════════════════════════════════════════════════════════════ -->
+<div class="pl-72 min-h-screen flex flex-col">
+
+  <!-- HEADER -->
+  <header class="fixed top-0 left-72 right-0 h-16 bg-white/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-lg">
+    <div class="flex-1 max-w-xl">
+      <div class="relative flex items-center">
+        <span class="material-symbols-outlined absolute left-space-sm text-on-surface-variant text-[20px]">search</span>
+        <input class="w-full h-10 pl-10 pr-space-md bg-surface-container-lowest text-on-surface font-body-md rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-bomberos-red/30" placeholder="Buscar expedientes, matrículas, razones sociales o actas..." type="text"/>
+      </div>
+    </div>
+    <div class="flex items-center gap-space-lg">
+      <div class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-full bg-surface-container-low">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span class="font-label-sm text-label-sm uppercase tracking-wider font-semibold">Sistema Operativo</span>
+      </div>
+      <button class="relative p-space-xs text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center">
+        <span class="material-symbols-outlined text-[24px]">notifications</span>
+        <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-bomberos-red ring-2 ring-white"></span>
+      </button>
+      <div class="flex items-center gap-space-sm">
+        <div class="flex flex-col text-right hidden sm:flex">
+          <span class="font-title-sm text-title-sm leading-tight">Ing. Supervisor Central</span>
+          <span class="font-body-sm text-body-sm text-on-surface-variant leading-tight">Dirección de Inspecciones</span>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-bomberos-red flex items-center justify-center shadow-sm">
+          <span class="font-label-sm text-label-sm text-white font-bold">SC</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- VISTAS DINÁMICAS -->
+  <main class="w-full pt-16 bg-surface px-space-lg py-space-lg flex-1">
+
+    <!-- ═══ VISTA 1: PANEL PRINCIPAL ═══ -->
+    <div id="view-panel-principal" class="view-content flex flex-col w-full gap-space-lg">
+      <div class="flex flex-col gap-space-sm">
+        <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+          <span>Admin</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span class="text-bomberos-red font-semibold">Panel Principal</span>
+        </div>
+        <h1 class="font-headline-lg text-headline-lg text-bomberos-navy">Panel de Control — Dirección Nacional de Bomberos</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">Visión global de los 3 módulos operativos del sistema SIPPCI</p>
+      </div>
+
+      <!-- KPIs Globales -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Trámites Totales</span>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[22px]">folder_open</span>
+            </div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">1,248</div>
+          <span class="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">
+            <span class="material-symbols-outlined text-[14px]">trending_up</span> +12% este mes
+          </span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">En Inspección</span>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[22px]">pending_actions</span>
+            </div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">84</div>
+          <span class="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">Asignados hoy</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Aprobados</span>
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[22px]">task_alt</span>
+            </div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">912</div>
+          <span class="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">Firma digital</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Observados</span>
+            <div class="w-10 h-10 rounded-lg bg-red-50 text-bomberos-red flex items-center justify-center">
+              <span class="material-symbols-outlined text-[22px]">warning</span>
+            </div>
+          </div>
+          <div class="font-display-lg text-display-lg text-bomberos-red mt-space-xs">32</div>
+          <span class="inline-flex items-center gap-1 text-bomberos-red bg-red-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">Requieren revisión</span>
+        </div>
+      </div>
+
+      <!-- Gráfico Distribución -->
+      <div class="bg-white rounded-xl shadow-sm p-space-lg">
+        <h2 class="font-title-md text-title-md text-bomberos-navy mb-space-md">Distribución de Trámites por Módulo</h2>
+        <div class="flex flex-col gap-space-md">
+          <div class="flex flex-col gap-space-xs">
+            <div class="flex justify-between font-label-md"><span class="font-medium">SIPPCI — Inspección de Infraestructuras</span><span class="font-semibold">171 trámites (70%)</span></div>
+            <div class="w-full h-2.5 rounded-full bg-surface-container-low overflow-hidden"><div class="h-full bg-bomberos-navy rounded-full" style="width: 70%"></div></div>
+          </div>
+          <div class="flex flex-col gap-space-xs">
+            <div class="flex justify-between font-label-md"><span class="font-medium">Reglamentación — Armería, Campos y Polígonos</span><span class="font-semibold">45 trámites (18%)</span></div>
+            <div class="w-full h-2.5 rounded-full bg-surface-container-low overflow-hidden"><div class="h-full bg-bomberos-red rounded-full" style="width: 18%"></div></div>
+          </div>
+          <div class="flex flex-col gap-space-xs">
+            <div class="flex justify-between font-label-md"><span class="font-medium">Turismo — Actividades Aéreas, Acuáticas y Terrestres</span><span class="font-semibold">28 trámites (12%)</span></div>
+            <div class="w-full h-2.5 rounded-full bg-surface-container-low overflow-hidden"><div class="h-full bg-bomberos-gold rounded-full" style="width: 12%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Últimas Carpetas -->
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-space-lg border-b border-surface-container">
+          <h2 class="font-title-md text-title-md text-bomberos-navy">Últimas Carpetas Ingresadas</h2>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Monitoreo en tiempo real de los 3 módulos operativos</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+                <th class="py-space-sm px-space-md font-semibold">Nro. Trámite</th>
+                <th class="py-space-sm px-space-md font-semibold">Contribuyente / Empresa</th>
+                <th class="py-space-sm px-space-md font-semibold">Tipo</th>
+                <th class="py-space-sm px-space-md font-semibold">Módulo</th>
+                <th class="py-space-sm px-space-md font-semibold">Sector</th>
+                <th class="py-space-sm px-space-md font-semibold">Ingreso</th>
+                <th class="py-space-sm px-space-md font-semibold text-center">Prioridad</th>
+                <th class="py-space-sm px-space-md font-semibold text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="font-body-sm text-body-sm">
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono font-medium">INF-2026-894</td>
+                <td class="py-space-sm px-space-md">YPFB Estación de Servicio</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">Jurídica</span></td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-bomberos-navy text-white font-label-sm">SIPPCI</span></td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Hidrocarburos</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Hoy 14:20</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-red-100 text-bomberos-red font-label-sm font-semibold">Alta</span></td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-label-sm font-semibold">Pendiente</span></td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono font-medium">REG-ARM-2026-045</td>
+                <td class="py-space-sm px-space-md">Defensa S.A.</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">Jurídica</span></td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-bomberos-red text-white font-label-sm">Reglamentación</span></td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Armería</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Ayer 16:30</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-red-100 text-bomberos-red font-label-sm font-semibold">Alta</span></td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-label-sm font-semibold">Pendiente</span></td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono font-medium">TUR-AER-2026-012</td>
+                <td class="py-space-sm px-space-md">Club de Vuelo Andino</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">Jurídica</span></td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-bomberos-gold text-bomberos-dark font-label-sm font-semibold">Turismo</span></td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Alas Delta</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Ayer 10:15</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-label-sm font-semibold">Media</span></td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-label-sm font-semibold">Aprobado</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA 2: SIPPCI ═══ -->
+    <div id="view-solicitudes-sippci" class="view-content hidden-view flex flex-col w-full gap-space-lg">
+      <div class="flex flex-col gap-space-sm">
+        <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+          <span>Admin</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span>Solicitudes</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span class="text-bomberos-red font-semibold">SIPPCI</span>
+        </div>
+        <h1 class="font-headline-lg text-headline-lg text-bomberos-navy">SIPPCI — Inspección de Infraestructuras</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">Gestión y revisión técnica de planes de evacuación, sistemas fijos contra incendios, señalización reglamentaria y extintores.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+        <a class="sidebar-item group rounded-xl bg-bomberos-navy text-white p-space-lg shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[160px] cursor-pointer" data-path="profesionales-todas">
+          <div class="flex items-center justify-between">
+            <div class="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[28px]">badge</span>
+            </div>
+            <span class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+              <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </span>
+          </div>
+          <div>
+            <h3 class="font-headline-sm text-headline-sm font-semibold">Registro de Profesionales</h3>
+            <p class="font-body-sm text-body-sm text-white/70 mt-1">12 pendientes</p>
+          </div>
+        </a>
+        <a class="sidebar-item group rounded-xl bg-bomberos-red text-white p-space-lg shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[160px] cursor-pointer" data-path="capacitacion-cursos">
+          <div class="flex items-center justify-between">
+            <div class="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[28px]">menu_book</span>
+            </div>
+            <span class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+              <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </span>
+          </div>
+          <div>
+            <h3 class="font-headline-sm text-headline-sm font-semibold">Capacitación</h3>
+            <p class="font-body-sm text-body-sm text-white/80 mt-1">4 cursos activos</p>
+          </div>
+        </a>
+        <a class="sidebar-item group rounded-xl bg-bomberos-red text-white p-space-lg shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[160px] cursor-pointer" data-path="cumplimiento-certificacion">
+          <div class="flex items-center justify-between">
+            <div class="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[28px]">verified_user</span>
+            </div>
+            <span class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+              <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </span>
+          </div>
+          <div>
+            <h3 class="font-headline-sm text-headline-sm font-semibold">Cumplimiento al SIPPCI</h3>
+            <p class="font-body-sm text-body-sm text-white/80 mt-1">16 observadas</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Solicitudes Pendientes</span>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">pending_actions</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">42</div>
+          <span class="text-amber-600 text-label-sm font-medium mt-space-md">+5 hoy</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">En Revisión</span>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">rate_review</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">28</div>
+          <span class="text-blue-600 text-label-sm font-medium mt-space-md">Mesa colegiada</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Aprobadas</span>
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">task_alt</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">184</div>
+          <span class="text-emerald-600 text-label-sm font-medium mt-space-md">Certificados</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Observadas</span>
+            <div class="w-10 h-10 rounded-lg bg-red-50 text-bomberos-red flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">warning</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg text-bomberos-red mt-space-xs">16</div>
+          <span class="text-bomberos-red text-label-sm font-medium mt-space-md">Riesgo Alto</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA 3: REGISTRO DE PROFESIONALES ═══ -->
+    <div id="view-profesionales-todas" class="view-content hidden-view flex flex-col w-full gap-space-lg">
+      <div class="flex flex-col gap-space-sm">
+        <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+          <span>Admin</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span>Solicitudes</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span>SIPPCI</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span class="text-bomberos-red font-semibold">Registro de Profesionales</span>
+        </div>
+        <h1 class="font-headline-lg text-headline-lg text-bomberos-navy">Registro de Profesionales</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">Gestión de solicitudes de registro profesional SIPPCI</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+        <div class="p-space-lg rounded-xl bg-white shadow-sm"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Pendientes</span><div class="font-display-lg text-display-lg text-amber-600 mt-space-xs">12</div></div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">En Revisión</span><div class="font-display-lg text-display-lg text-blue-600 mt-space-xs">5</div></div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Aprobadas</span><div class="font-display-lg text-display-lg text-emerald-600 mt-space-xs">45</div></div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm"><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Observadas</span><div class="font-display-lg text-display-lg text-bomberos-red mt-space-xs">3</div></div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+                <th class="py-space-sm px-space-md font-semibold">Código</th>
+                <th class="py-space-sm px-space-md font-semibold">Solicitante</th>
+                <th class="py-space-sm px-space-md font-semibold">Tipo</th>
+                <th class="py-space-sm px-space-md font-semibold">CI / NIT</th>
+                <th class="py-space-sm px-space-md font-semibold">Departamento</th>
+                <th class="py-space-sm px-space-md font-semibold">Fecha</th>
+                <th class="py-space-sm px-space-md font-semibold text-center">Estado</th>
+                <th class="py-space-sm px-space-md font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="font-body-sm text-body-sm">
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono font-medium">SIPPCI-PN-2026-001</td>
+                <td class="py-space-sm px-space-md">Juan Pérez Mamani</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-label-sm">Natural</span></td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">1234567 LP</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">La Paz</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">15/09/2026</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-label-sm font-semibold">Pendiente</span></td>
+                <td class="py-space-sm px-space-md text-right">
+                  <button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+                </td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono font-medium">SIPPCI-PJ-2026-002</td>
+                <td class="py-space-sm px-space-md">ABC S.R.L.</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-label-sm">Jurídica</span></td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">1023456789</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Santa Cruz</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">14/09/2026</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-label-sm font-semibold">En Revisión</span></td>
+                <td class="py-space-sm px-space-md text-right">
+                  <button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+                </td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono font-medium">SIPPCI-PN-2026-003</td>
+                <td class="py-space-sm px-space-md">María González</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-label-sm">Natural</span></td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">7654321 CB</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Cochabamba</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">13/09/2026</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-label-sm font-semibold">Aprobado</span></td>
+                <td class="py-space-sm px-space-md text-right">
+                  <button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high"><span class="material-symbols-outlined text-[18px]">visibility</span></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA 4: GESTIÓN DE EMPRESAS ═══ -->
+    <div id="view-usuarios-empresas" class="view-content hidden-view flex flex-col w-full gap-space-lg">
+      <div class="flex flex-col gap-space-sm">
+        <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+          <span>Admin</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span>Usuarios</span>
+          <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span class="text-bomberos-red font-semibold">Empresas</span>
+        </div>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+          <div class="flex flex-col">
+            <h1 class="font-headline-lg text-headline-lg text-bomberos-navy">Gestión de Empresas</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant mt-space-xs">Administración y estado normativo de personas jurídicas registradas</p>
+          </div>
+          <div class="flex items-center gap-space-sm flex-wrap">
+            <button class="flex items-center gap-space-xs px-space-md h-10 rounded-lg bg-white text-on-surface font-label-lg shadow-sm hover:bg-surface-container-high transition-all">
+              <span class="material-symbols-outlined text-[18px]">file_download</span>
+              <span>Exportar Padrón</span>
+            </button>
+            <button class="flex items-center gap-space-xs px-space-md h-10 rounded-lg bg-bomberos-red text-white font-label-lg shadow-sm hover:opacity-90 transition-all">
+              <span class="material-symbols-outlined text-[18px]">add_business</span>
+              <span>Registrar Nueva Empresa</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Empresas Registradas</span>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">business</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">87</div>
+          <span class="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">
+            <span class="material-symbols-outlined text-[14px]">trending_up</span> +6 este mes
+          </span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Activas</span>
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">check_circle</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">72</div>
+          <span class="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">82.7% vigentes</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Pendientes</span>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">pending</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg mt-space-xs">10</div>
+          <span class="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">Mesa de partes</span>
+        </div>
+        <div class="p-space-lg rounded-xl bg-white shadow-sm">
+          <div class="flex items-start justify-between">
+            <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Suspendidas</span>
+            <div class="w-10 h-10 rounded-lg bg-red-50 text-bomberos-red flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">block</span></div>
+          </div>
+          <div class="font-display-lg text-display-lg text-bomberos-red mt-space-xs">5</div>
+          <span class="inline-flex items-center gap-1 text-bomberos-red bg-red-50 px-2 py-0.5 rounded-full mt-space-md text-label-sm font-medium">Riesgo normativo</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left min-w-[980px]">
+            <thead>
+              <tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+                <th class="py-space-sm px-space-md font-semibold">NIT</th>
+                <th class="py-space-sm px-space-md font-semibold">Razón Social</th>
+                <th class="py-space-sm px-space-md font-semibold">Tipo</th>
+                <th class="py-space-sm px-space-md font-semibold">Representante</th>
+                <th class="py-space-sm px-space-md font-semibold">Departamento</th>
+                <th class="py-space-sm px-space-md font-semibold text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="empresasTableBody" class="font-body-sm text-body-sm">
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono">1023456789</td>
+                <td class="py-space-sm px-space-md font-semibold">ABC S.R.L.</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">S.R.L.</span></td>
+                <td class="py-space-sm px-space-md">Ing. Marcelo Quiroga</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Santa Cruz</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-label-sm font-semibold">Activa</span></td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono">1098765432</td>
+                <td class="py-space-sm px-space-md font-semibold">Defensa S.A.</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">S.A.</span></td>
+                <td class="py-space-sm px-space-md">Lic. Roberto Morales</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">La Paz</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-label-sm font-semibold">Activa</span></td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono">1056789012</td>
+                <td class="py-space-sm px-space-md font-semibold">Inversiones Retail S.A.</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">S.A.</span></td>
+                <td class="py-space-sm px-space-md">Dra. Patricia Vaca</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Cochabamba</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-label-sm font-semibold">Pendiente</span></td>
+              </tr>
+              <tr class="hover:bg-surface-container-low transition-colors">
+                <td class="py-space-sm px-space-md font-mono">1089012345</td>
+                <td class="py-space-sm px-space-md font-semibold">Minera San Cristóbal S.A.</td>
+                <td class="py-space-sm px-space-md"><span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm">S.A.</span></td>
+                <td class="py-space-sm px-space-md">Ing. Jorge Valenzuela</td>
+                <td class="py-space-sm px-space-md text-on-surface-variant">Potosí</td>
+                <td class="py-space-sm px-space-md text-center"><span class="px-2 py-0.5 rounded-full bg-red-100 text-bomberos-red font-label-sm font-semibold">Suspendida</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA PLACEHOLDER ═══ -->
+    <div id="view-placeholder" class="view-content hidden-view flex flex-col w-full gap-space-lg items-center justify-center py-20">
+      <div class="w-20 h-20 rounded-full bg-bomberos-red/10 flex items-center justify-center">
+        <span class="material-symbols-outlined text-[48px] text-bomberos-red">construction</span>
+      </div>
+      <h1 class="font-headline-lg text-headline-lg text-bomberos-navy">En desarrollo</h1>
+      <p class="font-body-md text-body-md text-on-surface-variant text-center max-w-md">Esta vista está siendo construida. Vuelve pronto para ver los avances del sistema SIPPCI V2.0.</p>
+      <button onclick="showView('panel-principal')" class="mt-space-md px-space-lg h-10 rounded-lg bg-bomberos-red text-white font-label-lg shadow-sm hover:opacity-90 transition-all">
+        Volver al Panel Principal
+      </button>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  const views = {
+    'panel-principal': 'view-panel-principal',
+    'solicitudes-sippci': 'view-solicitudes-sippci',
+    'profesionales-todas': 'view-profesionales-todas',
+    'usuarios-empresas': 'view-usuarios-empresas',
+    'solicitudes-reglamentacion': 'view-placeholder',
+    'solicitudes-turismo': 'view-placeholder',
+    'profesionales-natural': 'view-placeholder',
+    'profesionales-juridica': 'view-placeholder',
+    'capacitacion-cursos': 'view-placeholder',
+    'capacitacion-programar': 'view-placeholder',
+    'capacitacion-inscripciones': 'view-placeholder',
+    'capacitacion-calificar': 'view-placeholder',
+    'capacitacion-certificados': 'view-placeholder',
+    'cumplimiento-certificacion': 'view-placeholder',
+    'cumplimiento-declaracion-jurada': 'view-placeholder',
+    'cumplimiento-renovacion': 'view-placeholder',
+    'usuarios-internos': 'view-placeholder',
+    'usuarios-externos': 'view-placeholder',
+    'reportes': 'view-placeholder',
+    'configuracion': 'view-placeholder',
+    'auditoria': 'view-placeholder'
+  };
+
+  window.showView = function(path) {
+    document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden-view'));
+    const viewId = views[path] || 'view-placeholder';
+    const viewEl = document.getElementById(viewId);
+    if (viewEl) viewEl.classList.remove('hidden-view');
+
+    document.querySelectorAll('.sidebar-item').forEach(el => {
+      el.classList.remove('bg-bomberos-red', 'text-white', 'font-semibold');
+      el.classList.add('text-white/80');
+      if (el.dataset.path === path) {
+        el.classList.add('bg-bomberos-red', 'text-white', 'font-semibold');
+        el.classList.remove('text-white/80');
+      }
+    });
+    window.scrollTo(0, 0);
+  };
+
+  // Toggle genérico (Solicitudes, Usuarios)
+  document.querySelectorAll('.sidebar-toggle').forEach(toggle => {
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const targetId = this.dataset.target;
+      const target = document.getElementById(targetId);
+      const chevron = this.querySelector('.chevron');
+      if (target) {
+        target.classList.toggle('hidden');
+        if (chevron) {
+          chevron.style.transform = target.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      }
+    });
+  });
+
+  // Toggle específico SIPPCI
+  document.querySelectorAll('.sidebar-toggle-sippci').forEach(toggle => {
+    toggle.addEventListener('click', function(e) {
+      // Si el clic fue en el enlace SIPPCI, no hacemos toggle
+      if (e.target.closest('a[data-path="solicitudes-sippci"]')) {
+        return;
+      }
+      e.stopPropagation();
+      const targetId = this.dataset.target;
+      const target = document.getElementById(targetId);
+      const chevron = this.querySelector('.chevron-sippci');
+      if (target) {
+        target.classList.toggle('hidden');
+        if (chevron) {
+          chevron.style.transform = target.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      }
+    });
+  });
+
+  // Click en items de navegación
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const path = this.dataset.path;
+      if (path) {
+        showView(path);
+        // Mantener submenús abiertos
+        const submenuSolicitudes = document.getElementById('submenu-solicitudes');
+        if (submenuSolicitudes && (path.startsWith('solicitudes-') || path.startsWith('profesionales-') || path.startsWith('capacitacion-') || path.startsWith('cumplimiento-'))) {
+          submenuSolicitudes.classList.remove('hidden');
+        }
+        const submenuSippci = document.getElementById('submenu-sippci');
+        if (submenuSippci && (path.startsWith('profesionales-') || path.startsWith('capacitacion-') || path.startsWith('cumplimiento-'))) {
+          submenuSippci.classList.remove('hidden');
+        }
+        const submenuUsuarios = document.getElementById('submenu-usuarios');
+        if (submenuUsuarios && path.startsWith('usuarios-')) {
+          submenuUsuarios.classList.remove('hidden');
+        }
+      }
+    });
+  });
+
+  // Filtros de empresas
+  const searchInput = document.getElementById('searchInput');
+  const filterEstado = document.getElementById('filterEstado');
+  const tableBody = document.getElementById('empresasTableBody');
+  function applyFilter() {
+    if (!tableBody) return;
+    const term = (searchInput?.value || '').toLowerCase().trim();
+    const estado = (filterEstado?.value || '').toLowerCase();
+    tableBody.querySelectorAll('tr').forEach(row => {
+      const text = row.innerText.toLowerCase();
+      const matches = (!term || text.includes(term)) && (!estado || text.includes(estado));
+      row.style.display = matches ? '' : 'none';
+    });
+  }
+  if (searchInput) searchInput.addEventListener('keyup', applyFilter);
+  if (filterEstado) filterEstado.addEventListener('change', applyFilter);
+
+  // Init
+  showView('panel-principal');
+})();
+</script>
+
+</body>
+</html>

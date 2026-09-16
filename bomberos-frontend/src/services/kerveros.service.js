@@ -6,13 +6,31 @@ import API_URL, { apiClient } from '../config/api';
 // ============================================
 const MOCK_USERS = [
   {
+    ci: '7711111',
+    password: '123456',
+    nombre: 'MY. CARLOS ROJAS FLORES',
+    grado: 'MAYOR',
+    unidad: 'COMANDO GENERAL BOMBEROS',
+    email: 'admin@bomberos.gob.bo',
+    role: 'ADMIN'
+  },
+  {
     ci: '9905200',
     password: '123456',
     nombre: 'CAP. JUAN PÉREZ MAMANI',
     grado: 'CAPITÁN',
     unidad: 'UNIDAD BOMBEROS LA PAZ',
-    email: 'jperez@policia.bo',
-    role: 'INTERNO'
+    email: 'oficial@bomberos.gob.bo',
+    role: 'OFICIAL'
+  },
+  {
+    ci: '6622222',
+    password: '123456',
+    nombre: 'SBT. ANA FLORES CONDORI',
+    grado: 'SUBTENIENTE',
+    unidad: 'UNIDAD BOMBEROS COCHABAMBA',
+    email: 'capacitor@bomberos.gob.bo',
+    role: 'CAPACITOR'
   },
   {
     ci: '8812345',
@@ -21,25 +39,7 @@ const MOCK_USERS = [
     grado: 'TENIENTE',
     unidad: 'UNIDAD BOMBEROS SANTA CRUZ',
     email: 'mgomez@policia.bo',
-    role: 'INTERNO'
-  },
-  {
-    ci: '7711111',
-    password: '123456',
-    nombre: 'MY. CARLOS ROJAS FLORES',
-    grado: 'MAYOR',
-    unidad: 'COMANDO GENERAL BOMBEROS',
-    email: 'crojas@policia.bo',
-    role: 'ADMIN'
-  },
-  {
-    ci: '6622222',
-    password: '123456',
-    nombre: 'SBT. ANA FLORES CONDORI',
-    grado: 'SUBTENIENTE',
-    unidad: 'UNIDAD BOMBEROS COCHABAMBA',
-    email: 'aflores@policia.bo',
-    role: 'INTERNO'
+    role: 'OFICIAL'
   }
 ];
 
@@ -87,7 +87,7 @@ export const kerverosService = {
         // Guardar sesión final (JWT del backend)
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('userRole', response.data.user.role || 'INTERNO');
+        localStorage.setItem('userRole', response.data.user.role || 'OFICIAL');
         
         // Limpiar datos temporales de Kerveros
         localStorage.removeItem('kerverosToken');
@@ -143,7 +143,7 @@ export const kerverosService = {
     const kerverosUser = this.getKerverosUserData();
     // En producción: verificar rol/permisos en token Kerveros
     // En desarrollo: todos los usuarios INTERNO/ADMIN tienen acceso
-    return kerverosUser && (kerverosUser.role === 'INTERNO' || kerverosUser.role === 'ADMIN');
+    return kerverosUser && (kerverosUser.role === 'ADMIN' || kerverosUser.role === 'OFICIAL' || kerverosUser.role === 'CAPACITOR');
   },
 
   // ============================================

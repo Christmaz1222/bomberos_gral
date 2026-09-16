@@ -1,0 +1,115 @@
+/* ============================================
+   ADMIN DASHBOARD — Estilos del Sidebar y Layout
+   ============================================ */
+
+/* Ocultar scrollbar en sidebar */
+.admin-sidebar::-webkit-scrollbar {
+  display: none;
+}
+.admin-sidebar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Transición de submenús */
+.admin-sidebar .submenu-enter-active,
+.admin-sidebar .submenu-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+.admin-sidebar .submenu-enter-from,
+.admin-sidebar .submenu-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+.admin-sidebar .submenu-enter-to,
+.admin-sidebar .submenu-leave-from {
+  opacity: 1;
+  max-height: 500px;
+}
+
+/* Rotación del chevron */
+.chevron-rotated {
+  transform: rotate(180deg);
+}
+
+/* Hover items del sidebar */
+.sidebar-nav-item {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sidebar-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.sidebar-nav-item.active {
+  background-color: #C8102E;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Indicador de estado (pulso animado) */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 0.3; }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* Layout admin: sidebar fijo + contenido con padding-left */
+.admin-layout-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+.admin-layout-wrapper .admin-main-content {
+  flex: 1;
+  margin-left: 18rem; /* w-72 = 18rem */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header fijo */
+.admin-fixed-header {
+  position: fixed;
+  top: 0;
+  left: 18rem;
+  right: 0;
+  z-index: 40;
+}
+
+/* Responsive: sidebar colapsa en móvil */
+@media (max-width: 1023px) {
+  .admin-layout-wrapper .admin-main-content {
+    margin-left: 0;
+  }
+  .admin-fixed-header {
+    left: 0;
+  }
+}
+
+/* Tablas del admin */
+.admin-table th {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.admin-table td {
+  font-size: 0.8rem;
+}
+
+/* Cards con hover */
+.admin-card-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.admin-card-hover:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Badge de sidebar */
+.sidebar-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+}
