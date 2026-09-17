@@ -267,6 +267,7 @@ function getCatalogoSubmodulos() {
     { id: 7, nombre: 'Actividades Aéreas', modulo: 'TURISMO', icono: 'flight' },
     { id: 8, nombre: 'Actividades Acuáticas', modulo: 'TURISMO', icono: 'kayaking' },
     { id: 9, nombre: 'Actividades Terrestres', modulo: 'TURISMO', icono: 'hiking' },
+    { id: 10, nombre: 'Declaración Jurada', modulo: 'SIPPCI', icono: 'gavel' },
   ]
 }
 

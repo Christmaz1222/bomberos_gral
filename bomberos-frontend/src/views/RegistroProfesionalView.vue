@@ -91,7 +91,8 @@ const tramitesOficiales = [
   'Polígono de Tiro',
   'Actividades Aéreas',
   'Actividades Acuáticas',
-  'Actividades Terrestres'
+  'Actividades Terrestres',
+  'Declaración Jurada'
 ]
 
 onMounted(() => {

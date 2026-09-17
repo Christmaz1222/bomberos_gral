@@ -119,6 +119,12 @@ const routes = [
   { path: '/contactos', name: 'contactos', component: ContactosView, meta: { public: true } },
   { path: '/tramites', name: 'tramites', component: TramitesView, meta: { public: true } },
   { 
+    path: '/consulta', 
+    name: 'ConsultaPublica', 
+    component: () => import('../views/ConsultaPublicaView.vue'), 
+    meta: { public: true }, 
+  },
+  { 
     path: '/registro-profesional/:formularioSeleccionado?', 
     name: 'registro-profesional', 
     component: RegistroProfesionalView, 
@@ -226,6 +232,18 @@ const routes = [
         name: 'AdminCertificados',
         component: () => import('../views/admin/CertificadosListView.vue'),
         meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN'] },
+      },
+      {
+        path: 'inspecciones',
+        name: 'AdminInspecciones',
+        component: () => import('../views/admin/InspeccionesListView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
+      },
+      {
+        path: 'inspecciones/:id',
+        name: 'AdminInspeccionDetalle',
+        component: () => import('../views/admin/InspeccionDetalleView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
       },
       {
         path: 'capacitaciones',

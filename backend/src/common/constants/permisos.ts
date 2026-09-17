@@ -41,6 +41,12 @@ export const PERMISOS = {
   // Configuración
   CONFIG_READ: 'config.read',
   CONFIG_UPDATE: 'config.update',
+
+  // FASE 7: Inspecciones
+  INSPECCIONES_READ: 'inspecciones.read',
+  INSPECCIONES_ASSIGN: 'inspecciones.assign',
+  INSPECCIONES_COMPLETE: 'inspecciones.complete',
+  INSPECCIONES_CANCEL: 'inspecciones.cancel',
 } as const;
 
 export type PermisoKey = keyof typeof PERMISOS;
@@ -67,6 +73,8 @@ export const PERMISOS_POR_ROL: Record<string, Permiso[]> = {
     PERMISOS.CERTIFICADOS_READ,
     PERMISOS.ALERTAS_READ,
     PERMISOS.STATS_READ,
+    PERMISOS.INSPECCIONES_READ,
+    PERMISOS.INSPECCIONES_COMPLETE,
   ],
   CAJERO: [
     PERMISOS.SOLICITUDES_READ,
@@ -91,6 +99,10 @@ export const PERMISOS_POR_ROL: Record<string, Permiso[]> = {
     PERMISOS.ALERTAS_MARK_READ,
     PERMISOS.STATS_READ,
     PERMISOS.CONFIG_READ,
+    PERMISOS.INSPECCIONES_READ,
+    PERMISOS.INSPECCIONES_ASSIGN,
+    PERMISOS.INSPECCIONES_COMPLETE,
+    PERMISOS.INSPECCIONES_CANCEL,
   ],
   TECNICO_VERIFICADOR: [
     PERMISOS.SOLICITUDES_READ,
@@ -98,6 +110,7 @@ export const PERMISOS_POR_ROL: Record<string, Permiso[]> = {
     PERMISOS.DOCUMENTOS_READ,
     PERMISOS.DOCUMENTOS_DOWNLOAD,
     PERMISOS.CERTIFICADOS_READ,
+    PERMISOS.INSPECCIONES_READ,
     PERMISOS.STATS_READ,
   ],
 };

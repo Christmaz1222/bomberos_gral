@@ -529,4 +529,102 @@ export class AuthService {
       role: usuario.role,
     };
   }
+
+  // ============================================
+  // FASE 6 — GESTIÓN DE TRÁMITES DEL CIUDADANO
+  // ============================================
+
+  // 1. Listar trámites habilitados de la sesión del ciudadano
+  async obtenerTramites(usuarioId: number) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { tramites_solicitados: true },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const tramites = Array.isArray(usuario.tramites_solicitados)
+      ? usuario.tramites_solicitados
+      : [];
+
+    return { tramites_solicitados: tramites, total: tramites.length };
+  }
+
+  // 2. Agregar trámite a la sesión del ciudadano
+  async agregarTramite(usuarioId: number, data: { nombre: string; entregar_ci?: string }) {
+    const nombre = (data.nombre || '').trim();
+    if (!nombre) {
+      throw new BadRequestException('El nombre del trámite es obligatorio');
+    }
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { tramites_solicitados: true },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const tramites = Array.isArray(usuario.tramites_solicitados)
+      ? usuario.tramites_solicitados
+      : [];
+
+    if (tramites.includes(nombre)) {
+      throw new BadRequestException('Ese trámite ya está habilitado para tu cuenta');
+    }
+
+    const tramitesActualizados = [...tramites, nombre];
+
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { tramites_solicitados: tramitesActualizados },
+    });
+
+    return {
+      message: 'Trámite agregado correctamente',
+      tramites_solicitados: tramitesActualizados,
+      total: tramitesActualizados.length,
+    };
+  }
+
+  // 3. Quitar trámite de la sesión del ciudadano
+  async quitarTramite(usuarioId: number, nombre: string) {
+    const tramite = (nombre || '').trim();
+    if (!tramite) {
+      throw new BadRequestException('El nombre del trámite es obligatorio');
+    }
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { tramites_solicitados: true },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const tramites = Array.isArray(usuario.tramites_solicitados)
+      ? usuario.tramites_solicitados
+      : [];
+
+    if (!tramites.includes(tramite)) {
+      throw new BadRequestException('Ese trámite no está habilitado en tu cuenta');
+    }
+
+    const tramitesActualizados = tramites.filter((t) => t !== tramite);
+
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { tramites_solicitados: tramitesActualizados },
+    });
+
+    return {
+      message: 'Trámite quitado correctamente',
+      tramites_solicitados: tramitesActualizados,
+      total: tramitesActualizados.length,
+    };
+  }
 }

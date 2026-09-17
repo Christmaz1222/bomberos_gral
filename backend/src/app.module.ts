@@ -10,6 +10,8 @@ import { EmailModule } from './email/email.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
 import { CertificadosModule } from './certificados/certificados.module';
 import { AdminModule } from './admin/admin.module';
+import { ComprobanteModule } from './comprobantes/comprobante.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { AdminModule } from './admin/admin.module';
     SolicitudesModule,
     CertificadosModule,
     AdminModule,
+    ComprobanteModule,
+    PublicModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 10,

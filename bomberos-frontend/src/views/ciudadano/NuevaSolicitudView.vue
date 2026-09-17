@@ -53,6 +53,15 @@
               <h3 class="font-bold text-gray-900 text-sm mt-0.5">{{ t.nombre }}</h3>
               <p class="text-xs text-gray-500 mt-1">Click para iniciar el trámite</p>
             </div>
+            <button
+              type="button"
+              @click.stop="quitarTramite(t)"
+              class="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+              title="Quitar de mis trámites"
+              :disabled="cargando"
+            >
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
             <span class="material-symbols-outlined text-gray-300 group-hover:text-red-600 transition-colors">
               arrow_forward
             </span>
@@ -102,6 +111,16 @@
               <h3 class="font-bold text-gray-600 text-sm mt-0.5">{{ t.nombre }}</h3>
               <p class="text-xs text-gray-400 mt-1">No habilitado para tu cuenta</p>
             </div>
+            <button
+              type="button"
+              @click.stop="habilitarTramite(t)"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-1"
+              title="Habilitar trámite"
+              :disabled="cargando"
+            >
+              <span class="material-symbols-outlined text-[16px]">add</span>
+              Habilitar
+            </button>
           </div>
         </div>
 
@@ -120,6 +139,7 @@
 import { ref, computed, onMounted } from 'vue'
 import apiClient from '../../config/api'
 import { useToast } from '../../composables/useToast'
+import { authService } from '../../services/auth.service'
 
 const toast = useToast()
 
@@ -164,7 +184,36 @@ function getCatalogoSubmodulos() {
     { id: 7, nombre: 'Actividades Aéreas', modulo: 'TURISMO', icono: 'flight' },
     { id: 8, nombre: 'Actividades Acuáticas', modulo: 'TURISMO', icono: 'kayaking' },
     { id: 9, nombre: 'Actividades Terrestres', modulo: 'TURISMO', icono: 'hiking' },
+    { id: 10, nombre: 'Declaración Jurada', modulo: 'SIPPCI', icono: 'gavel' },
   ]
+}
+
+async function habilitarTramite(tramite) {
+  cargando.value = true
+  try {
+    await authService.agregarTramite({ nombre: tramite.nombre })
+    await cargar()
+    toast.success(`Trámite "${tramite.nombre}" agregado a tu sesión`)
+  } catch (e) {
+    console.error(e)
+    toast.error(e?.message || 'No se pudo agregar el trámite')
+  } finally {
+    cargando.value = false
+  }
+}
+
+async function quitarTramite(tramite) {
+  cargando.value = true
+  try {
+    await authService.quitarTramite(tramite.nombre)
+    await cargar()
+    toast.success(`Trámite "${tramite.nombre}" quitado de tu sesión`)
+  } catch (e) {
+    console.error(e)
+    toast.error(e?.message || 'No se pudo quitar el trámite')
+  } finally {
+    cargando.value = false
+  }
 }
 
 onMounted(() => {

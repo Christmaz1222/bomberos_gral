@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -719,5 +720,287 @@ export class AdminService {
     });
 
     return cumplidos === idsObligatorios.length;
+  }
+
+  // ============================================
+  // FASE 7: INSPECCIONES
+  // ============================================
+
+  /**
+   * FASE 7: Lista los usuarios internos (filtro por rol)
+   */
+  async listarUsuariosInternos(rol?: string) {
+    const where: any = { activo: true };
+    if (rol) where.rol = rol;
+
+    return this.prisma.usuarioInterno.findMany({
+      where,
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+      },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  /**
+   * FASE 7: Asigna un inspector a una solicitud
+   */
+  async asignarInspector(
+    codigo: string,
+    inspectorId: number,
+    asignadoPor: number,
+    fechaProgramada?: Date,
+  ) {
+    // 1. Verificar solicitud
+    const solicitud = await this.prisma.solicitud.findUnique({
+      where: { codigo },
+    });
+
+    if (!solicitud) {
+      throw new NotFoundException(`Solicitud ${codigo} no encontrada`);
+    }
+
+    // 2. Verificar que el inspector existe y es INSPECTOR (o ADMIN)
+    const inspector = await this.prisma.usuarioInterno.findUnique({
+      where: { id: inspectorId },
+    });
+
+    if (!inspector) {
+      throw new NotFoundException(`Inspector ${inspectorId} no encontrado`);
+    }
+
+    if (inspector.rol !== 'INSPECTOR' && inspector.rol !== 'ADMIN') {
+      throw new BadRequestException('El usuario no es inspector');
+    }
+
+    // 3. Verificar que no haya inspección activa
+    const inspeccionActiva = await this.prisma.inspeccion.findFirst({
+      where: {
+        solicitud_id: solicitud.id,
+        estado: { in: ['ASIGNADA', 'REALIZADA'] },
+      },
+    });
+
+    if (inspeccionActiva) {
+      throw new ConflictException('Ya existe una inspección activa para esta solicitud');
+    }
+
+    // 4. Crear inspección
+    const inspeccion = await this.prisma.inspeccion.create({
+      data: {
+        solicitud_id: solicitud.id,
+        inspector_id: inspectorId,
+        asignado_por: asignadoPor,
+        fecha_programada: fechaProgramada,
+        estado: 'ASIGNADA',
+      },
+      include: {
+        inspector: { select: { id: true, nombre: true, email: true, rol: true } },
+        solicitud: { select: { codigo: true, estado: true } },
+      },
+    });
+
+    // 5. Escribir en historial
+    await this.prisma.historialSolicitud.create({
+      data: {
+        solicitud_id: solicitud.id,
+        usuario_interno_id: asignadoPor,
+        estado_anterior: solicitud.estado,
+        estado_nuevo: solicitud.estado,
+        observacion: `Inspector asignado: ${inspector.nombre} (${inspector.email})`,
+      },
+    });
+
+    this.logger.log(`🔎 Inspección asignada: ${codigo} → ${inspector.nombre}`);
+
+    return inspeccion;
+  }
+
+  /**
+   * FASE 7: Lista inspecciones (con filtros y paginación)
+   */
+  async listarInspecciones(params: {
+    inspector_id?: number;
+    estado?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = params.page || 1;
+    const limit = params.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (params.inspector_id) where.inspector_id = params.inspector_id;
+    if (params.estado) where.estado = params.estado;
+
+    const [inspecciones, total] = await Promise.all([
+      this.prisma.inspeccion.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { fecha_asignacion: 'desc' },
+        include: {
+          inspector: { select: { id: true, nombre: true, email: true, rol: true } },
+          solicitud: {
+            select: {
+              codigo: true,
+              estado: true,
+              tipo_persona: true,
+              submodulo: {
+                include: { modulo: { select: { nombre: true } } },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.inspeccion.count({ where }),
+    ]);
+
+    return {
+      data: inspecciones,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * FASE 7: Detalle de una inspección
+   */
+  async detalleInspeccion(id: number) {
+    const inspeccion = await this.prisma.inspeccion.findUnique({
+      where: { id },
+      include: {
+        inspector: { select: { id: true, nombre: true, email: true, rol: true } },
+        asignador: { select: { id: true, nombre: true, email: true } },
+        solicitud: {
+          include: {
+            usuario: { select: { nombre_completo: true, ci: true, email: true } },
+            empresa: { select: { razon_social: true, nit: true } },
+            submodulo: { include: { modulo: true } },
+            requisitos: { include: { requisito: true } },
+            documentos: true,
+          },
+        },
+      },
+    });
+
+    if (!inspeccion) {
+      throw new NotFoundException(`Inspección ${id} no encontrada`);
+    }
+
+    return inspeccion;
+  }
+
+  /**
+   * FASE 7: Completa una inspección cambiando el estado de la solicitud
+   */
+  async completarInspeccion(
+    id: number,
+    inspectorId: number,
+    dto: {
+      resultado: string;
+      observaciones?: string;
+      checklist?: any;
+      firma_inspector?: string;
+    },
+  ) {
+    // 1. Verificar inspección
+    const inspeccion = await this.prisma.inspeccion.findUnique({
+      where: { id },
+      include: { solicitud: true, inspector: true },
+    });
+
+    if (!inspeccion) {
+      throw new NotFoundException(`Inspección ${id} no encontrada`);
+    }
+
+    // 2. Verificar que el inspector es el asignado (o admin/supervisor)
+    if (inspeccion.inspector_id !== inspectorId) {
+      const usuario = await this.prisma.usuarioInterno.findUnique({
+        where: { id: inspectorId },
+      });
+      if (usuario?.rol !== 'ADMIN' && usuario?.rol !== 'SUPERVISOR') {
+        throw new ForbiddenException('No eres el inspector asignado');
+      }
+    }
+
+    // 3. Verificar estado
+    if (!['ASIGNADA', 'REALIZADA'].includes(inspeccion.estado)) {
+      throw new BadRequestException(
+        `No se puede completar una inspección en estado ${inspeccion.estado}`,
+      );
+    }
+
+    // 4. Validar resultado
+    if (!['APROBADO', 'OBSERVADO', 'RECHAZADO'].includes(dto.resultado)) {
+      throw new BadRequestException('Resultado inválido');
+    }
+
+    // 5. Actualizar inspección
+    const inspeccionActualizada = await this.prisma.inspeccion.update({
+      where: { id },
+      data: {
+        estado:
+          dto.resultado === 'APROBADO'
+            ? 'APROBADA'
+            : dto.resultado === 'OBSERVADO'
+              ? 'OBSERVADA'
+              : 'RECHAZADA',
+        resultado: dto.resultado,
+        observaciones: dto.observaciones,
+        checklist: dto.checklist || {},
+        firma_inspector: dto.firma_inspector,
+        fecha_realizada: new Date(),
+      },
+      include: {
+        inspector: { select: { id: true, nombre: true } },
+        solicitud: { select: { codigo: true, estado: true } },
+      },
+    });
+
+    // 6. Cambiar estado de la solicitud según el resultado
+    let nuevoEstadoSolicitud: string;
+    if (dto.resultado === 'APROBADO') {
+      nuevoEstadoSolicitud = 'APROBADO';
+    } else if (dto.resultado === 'OBSERVADO') {
+      nuevoEstadoSolicitud = 'OBSERVADO';
+    } else {
+      nuevoEstadoSolicitud = 'ANULADO';
+    }
+
+    await this.prisma.solicitud.update({
+      where: { id: inspeccion.solicitud_id },
+      data: {
+        estado: nuevoEstadoSolicitud as any,
+        fecha_aprobacion: dto.resultado === 'APROBADO' ? new Date() : undefined,
+      },
+    });
+
+    // 7. Escribir en historial
+    await this.prisma.historialSolicitud.create({
+      data: {
+        solicitud_id: inspeccion.solicitud_id,
+        usuario_interno_id: inspectorId,
+        estado_anterior: inspeccion.solicitud.estado,
+        estado_nuevo: nuevoEstadoSolicitud,
+        observacion: `Inspección ${dto.resultado}: ${dto.observaciones || 'Sin observaciones'}`,
+      },
+    });
+
+    this.logger.log(
+      `✅ Inspección completada: ${inspeccion.solicitud.codigo} → ${nuevoEstadoSolicitud}`,
+    );
+
+    return {
+      message: `Inspección completada: ${dto.resultado}`,
+      inspeccion: inspeccionActualizada,
+      solicitud: {
+        codigo: inspeccion.solicitud.codigo,
+        estado_nuevo: nuevoEstadoSolicitud,
+      },
+    };
   }
 }

@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ComprobanteService } from '../comprobantes/comprobante.service';
 import type { EstadoSolicitud } from '@prisma/client';
 import {
   CreateSolicitudDto,
@@ -49,7 +50,10 @@ export class SolicitudesService {
     'CAPACITACION': 'CAPAC',
   };
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private comprobanteService: ComprobanteService,
+  ) {}
 
   /**
    * Genera un código único para la solicitud
@@ -153,6 +157,14 @@ export class SolicitudesService {
         tipoPersona,
         dto.datos_especificos,
       );
+    }
+
+    // 7. Generar comprobante PDF automáticamente (no bloqueante)
+    try {
+      await this.comprobanteService.generarComprobante(solicitud.codigo);
+      this.logger.log(`📄 Comprobante generado para ${solicitud.codigo}`);
+    } catch (err) {
+      this.logger.warn(`⚠️ Error generando comprobante: ${err.message}`);
     }
 
     this.logger.log(`✅ Solicitud creada: ${codigo} (usuario ${usuarioId})`);

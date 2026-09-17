@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   Request,
   Res,
@@ -21,7 +22,14 @@ import {
 import { IsNotEmpty, IsOptional, IsString, MaxLength, IsInt } from 'class-validator';
 import type { Response } from 'express';
 import { AdminService } from './admin.service';
-import { QuerySolicitudesAdminDto, CambiarEstadoAdminDto } from './dto';
+import { ComprobanteService } from '../comprobantes/comprobante.service';
+import {
+  QuerySolicitudesAdminDto,
+  CambiarEstadoAdminDto,
+  AsignarInspectorDto,
+  CompletarInspeccionDto,
+  QueryInspeccionesDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PermisosGuard } from '../common/guards/permisos.guard';
@@ -51,7 +59,10 @@ export class ActualizarRequisitoDto {
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard, PermisosGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly comprobanteService: ComprobanteService,
+  ) {}
 
   @Get('stats')
   @RequirePermissions(PERMISOS.STATS_READ)
@@ -86,6 +97,22 @@ export class AdminController {
   @ApiResponse({ status: 404, description: 'No encontrada' })
   async detalleSolicitud(@Param('codigo') codigo: string) {
     return this.adminService.detalleSolicitud(codigo);
+  }
+
+  @Get('solicitudes/:codigo/comprobante')
+  @RequirePermissions(PERMISOS.SOLICITUDES_READ)
+  @ApiOperation({
+    summary: 'Descargar comprobante de registro (admin)',
+    description: 'Descarga el comprobante PDF de una solicitud. Solo para usuarios internos.',
+  })
+  @ApiResponse({ status: 200, description: 'PDF del comprobante' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada' })
+  async descargarComprobante(
+    @Param('codigo') codigo: string,
+    @Res() res: Response,
+  ) {
+    const pdfPath = await this.comprobanteService.obtenerComprobante(codigo);
+    res.download(pdfPath, `comprobante-${codigo}.pdf`);
   }
 
   @Get('solicitudes/:codigo/documentos/:id/descargar')
@@ -224,5 +251,88 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Estado de guardia' })
   async guardia() {
     return this.adminService.obtenerGuardia();
+  }
+
+  // ============================================
+  // FASE 7: INSPECCIONES
+  // ============================================
+
+  @Get('inspecciones')
+  @RequirePermissions(PERMISOS.INSPECCIONES_READ)
+  @ApiOperation({
+    summary: 'Listar inspecciones',
+    description: 'Paginado con filtros por inspector/estado. Un INSPECTOR solo ve las suyas.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de inspecciones' })
+  @ApiResponse({ status: 403, description: 'Sin permiso' })
+  async listarInspecciones(@Request() req, @Query() query: QueryInspeccionesDto) {
+    const userRol = req.user.rol || req.user.role;
+    if (userRol === 'INSPECTOR') {
+      query.inspector_id = req.user.sub || req.user.id;
+    }
+    return this.adminService.listarInspecciones(query);
+  }
+
+  @Get('inspecciones/:id')
+  @RequirePermissions(PERMISOS.INSPECCIONES_READ)
+  @ApiOperation({
+    summary: 'Detalle de inspección',
+    description: 'Retorna la inspección con la solicitud completa (usuario/empresa, documentos, requisitos).',
+  })
+  @ApiResponse({ status: 200, description: 'Detalle de la inspección' })
+  @ApiResponse({ status: 404, description: 'No encontrada' })
+  async detalleInspeccion(@Param('id') id: string) {
+    return this.adminService.detalleInspeccion(parseInt(id, 10));
+  }
+
+  @Patch('inspecciones/:id/completar')
+  @RequirePermissions(PERMISOS.INSPECCIONES_COMPLETE)
+  @ApiOperation({
+    summary: 'Completar inspección',
+    description: 'Solo el inspector asignado (o admin/supervisor). Cambia el estado de la solicitud según el resultado.',
+  })
+  @ApiBody({ type: CompletarInspeccionDto })
+  @ApiResponse({ status: 200, description: 'Inspección completada' })
+  @ApiResponse({ status: 400, description: 'Estado o resultado inválido' })
+  @ApiResponse({ status: 403, description: 'Sin permiso para completar' })
+  @ApiResponse({ status: 404, description: 'Inspección no encontrada' })
+  async completarInspeccion(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: CompletarInspeccionDto,
+  ) {
+    const usuarioId = req.user.sub || req.user.id;
+    return this.adminService.completarInspeccion(parseInt(id, 10), usuarioId, dto);
+  }
+
+  @Post('solicitudes/:codigo/asignar-inspector')
+  @RequirePermissions(PERMISOS.INSPECCIONES_ASSIGN)
+  @ApiOperation({
+    summary: 'Asignar inspector a una solicitud',
+    description: 'Registra la inspección en estado ASIGNADA y anota en el historial de la solicitud.',
+  })
+  @ApiBody({ type: AsignarInspectorDto })
+  @ApiResponse({ status: 201, description: 'Inspección asignada' })
+  @ApiResponse({ status: 400, description: 'El usuario no es inspector' })
+  @ApiResponse({ status: 404, description: 'Solicitud o inspector no encontrados' })
+  async asignarInspector(
+    @Request() req,
+    @Param('codigo') codigo: string,
+    @Body() dto: AsignarInspectorDto,
+  ) {
+    const asignadoPor = req.user.sub || req.user.id;
+    const fechaProgramada = dto.fecha_programada ? new Date(dto.fecha_programada) : undefined;
+    return this.adminService.asignarInspector(codigo, dto.inspector_id, asignadoPor, fechaProgramada);
+  }
+
+  @Get('usuarios-internos')
+  @RequirePermissions(PERMISOS.USUARIOS_READ)
+  @ApiOperation({
+    summary: 'Listar usuarios internos',
+    description: 'Útil para poblar el selector de inspectores.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios internos activos' })
+  async listarUsuariosInternos(@Query('rol') rol?: string) {
+    return this.adminService.listarUsuariosInternos(rol);
   }
 }

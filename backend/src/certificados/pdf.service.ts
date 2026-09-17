@@ -212,4 +212,225 @@ export class PdfService {
       }
     });
   }
+
+  /**
+   * Genera el PDF del comprobante de registro
+   */
+  async generarComprobante(
+    data: {
+      codigo: string;
+      tipo_formulario: string;
+      nombre_titular: string;
+      ci_nit: string;
+      correo: string;
+      telefono: string;
+      modulo: string;
+      submodulo: string;
+      fecha_solicitud: Date;
+      estado: string;
+      monto_deposito: string | null;
+      qr_data_url: string;
+    },
+    outputPath: string,
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({
+          size: 'A4',
+          layout: 'portrait',
+          margins: { top: 40, bottom: 40, left: 60, right: 60 },
+        });
+
+        const stream = fs.createWriteStream(outputPath);
+        doc.pipe(stream);
+
+        // ============ BORDE DECORATIVO ============
+        doc
+          .rect(20, 20, doc.page.width - 40, doc.page.height - 40)
+          .lineWidth(3)
+          .strokeColor('#C41E3A')
+          .stroke();
+
+        doc
+          .rect(26, 26, doc.page.width - 52, doc.page.height - 52)
+          .lineWidth(1)
+          .strokeColor('#1A3A5C')
+          .stroke();
+
+        // ============ ENCABEZADO ============
+        doc
+          .fillColor('#1A3A5C')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text('ESTADO PLURINACIONAL DE BOLIVIA', 60, 60, { align: 'center' });
+
+        doc
+          .fontSize(9)
+          .font('Helvetica')
+          .text('POLICÍA BOLIVIANA', { align: 'center' });
+
+        doc
+          .fontSize(11)
+          .font('Helvetica-Bold')
+          .text('DIRECCIÓN NACIONAL DE BOMBEROS', { align: 'center' });
+
+        // ============ TÍTULO ============
+        doc
+          .moveDown(1.5)
+          .fillColor('#C41E3A')
+          .fontSize(22)
+          .font('Helvetica-Bold')
+          .text('COMPROBANTE DE REGISTRO', { align: 'center' });
+
+        doc
+          .moveDown(0.3)
+          .fillColor('#1A3A5C')
+          .fontSize(14)
+          .font('Helvetica-Bold')
+          .text(data.codigo, { align: 'center' });
+
+        doc
+          .moveDown(0.2)
+          .fillColor('#666666')
+          .fontSize(9)
+          .font('Helvetica')
+          .text('Este comprobante acredita el registro de su solicitud', { align: 'center' });
+
+        // ============ DATOS DEL SOLICITANTE ============
+        doc.moveDown(2);
+
+        const labelWidth = 130;
+        const valueStart = 60 + labelWidth;
+
+        doc
+          .fillColor('#1A3A5C')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text('DATOS DEL SOLICITANTE', 60, doc.y);
+
+        doc.moveDown(0.5);
+
+        const campos = [
+          ['Solicitante', data.nombre_titular],
+          ['Identificación', data.ci_nit],
+          ['Correo', data.correo],
+          ['Teléfono', data.telefono],
+        ];
+
+        campos.forEach(([label, value]) => {
+          const y = doc.y;
+          doc
+            .fillColor('#666666')
+            .fontSize(9)
+            .font('Helvetica-Bold')
+            .text(label, 60, y, { width: labelWidth });
+
+          doc
+            .fillColor('#333333')
+            .font('Helvetica')
+            .text(value || '—', valueStart, y, { width: 300 });
+
+          doc.moveDown(0.3);
+        });
+
+        // ============ DATOS DEL TRÁMITE ============
+        doc.moveDown(1);
+
+        doc
+          .fillColor('#1A3A5C')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text('DATOS DEL TRÁMITE', 60, doc.y);
+
+        doc.moveDown(0.5);
+
+        const fechaStr =
+          data.fecha_solicitud instanceof Date
+            ? data.fecha_solicitud.toLocaleDateString('es-BO')
+            : String(data.fecha_solicitud || '—');
+
+        const camposTramite = [
+          ['Módulo', data.modulo],
+          ['Trámite', data.submodulo],
+          ['Tipo formulario', data.tipo_formulario],
+          ['Fecha de solicitud', fechaStr],
+          ['Estado actual', data.estado],
+        ];
+
+        if (data.monto_deposito) {
+          camposTramite.push(['Monto del depósito', data.monto_deposito]);
+        }
+
+        camposTramite.forEach(([label, value]) => {
+          const y = doc.y;
+          doc
+            .fillColor('#666666')
+            .fontSize(9)
+            .font('Helvetica-Bold')
+            .text(label, 60, y, { width: labelWidth });
+
+          doc
+            .fillColor('#333333')
+            .font('Helvetica')
+            .text(value || '—', valueStart, y, { width: 300 });
+
+          doc.moveDown(0.3);
+        });
+
+        // ============ QR ============
+        const qrY = doc.page.height - 200;
+
+        if (data.qr_data_url) {
+          const base64Data = data.qr_data_url.replace(/^data:image\/png;base64,/, '');
+          const qrBuffer = Buffer.from(base64Data, 'base64');
+          doc.image(qrBuffer, doc.page.width / 2 - 50, qrY, { width: 100, height: 100 });
+
+          doc
+            .fontSize(8)
+            .font('Helvetica')
+            .fillColor('#666666')
+            .text('Escanee para consultar el estado', 60, qrY + 105, {
+              align: 'center',
+              width: doc.page.width - 120,
+            });
+        }
+
+        // ============ PIE ============
+        doc
+          .fontSize(8)
+          .font('Helvetica')
+          .fillColor('#999999')
+          .text(
+            'Este comprobante NO es un certificado. Es un acuse de recibo del registro de su solicitud.',
+            60,
+            doc.page.height - 60,
+            { align: 'center', width: doc.page.width - 120 },
+          );
+
+        doc
+          .fontSize(7)
+          .text(
+            `Generado el ${new Date().toLocaleString('es-BO')}`,
+            60,
+            doc.page.height - 45,
+            { align: 'center', width: doc.page.width - 120 },
+          );
+
+        doc.end();
+
+        stream.on('finish', () => {
+          this.logger.log(`📄 Comprobante PDF generado: ${outputPath}`);
+          resolve(outputPath);
+        });
+
+        stream.on('error', (err) => {
+          this.logger.error(`❌ Error comprobante PDF: ${err.message}`);
+          reject(err);
+        });
+      } catch (error) {
+        this.logger.error(`❌ Error comprobante PDF: ${error.message}`);
+        reject(error);
+      }
+    });
+  }
 }

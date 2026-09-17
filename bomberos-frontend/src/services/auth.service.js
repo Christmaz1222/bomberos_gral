@@ -120,6 +120,40 @@ export const authService = {
     return this.resendOtp(emailOrObj);
   },
 
+  // ============================================
+  // FASE 6 — GESTIÓN DE TRÁMITES EN LA SESIÓN
+  // ============================================
+
+  // 1. Listar trámites habilitados en la sesión del ciudadano
+  async listarTramites() {
+    try {
+      const response = await apiClient.get(`/auth/tramites`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error al listar trámites' };
+    }
+  },
+
+  // 2. Agregar trámite a la sesión del ciudadano
+  async agregarTramite(datos) {
+    try {
+      const response = await apiClient.post(`/auth/tramites/agregar`, datos);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error al agregar trámite' };
+    }
+  },
+
+  // 3. Quitar trámite de la sesión del ciudadano
+  async quitarTramite(nombre) {
+    try {
+      const response = await apiClient.delete(`/auth/tramites/${encodeURIComponent(nombre)}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error al quitar trámite' };
+    }
+  },
+
   // 🔌 Método preparado para SEGIP (Simulación actual / Listo para producción backend)
   async consultarSegip(ci) {
     // ----------------------------------------------------
@@ -141,6 +175,37 @@ export const authService = {
         }
       }, 500);
     });
+  },
+
+  // FASE 6 — Gestión de trámites de la sesión del ciudadano
+  // 1. Listar trámites habilitados en la sesión
+  async listarTramites() {
+    try {
+      const response = await apiClient.get(`/auth/tramites`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error al listar trámites' };
+    }
+  },
+
+  // 2. Agregar trámite a la sesión del ciudadano
+  async agregarTramite(datos) {
+    try {
+      const response = await apiClient.post(`/auth/tramites/agregar`, datos);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error al agregar trámite' };
+    }
+  },
+
+  // 3. Quitar trámite de la sesión del ciudadano
+  async quitarTramite(nombre) {
+    try {
+      const response = await apiClient.delete(`/auth/tramites/${encodeURIComponent(nombre)}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Error al quitar trámite' };
+    }
   },
 
   isAuthenticated() {

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Query, Req, UseGuards, Delete, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -6,10 +6,18 @@ import {
   ApiBody,
   ApiBearerAuth,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { LoginDto, VerifyOtpDto, RegisterDto, ResendOtpDto, KerverosExchangeDto } from './dto';
+import {
+  LoginDto,
+  VerifyOtpDto,
+  RegisterDto,
+  ResendOtpDto,
+  KerverosExchangeDto,
+  AgregarTramiteDto,
+} from './dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -273,5 +281,81 @@ export class AuthController {
         redirectUrl: '/admin/login?error=kerveros_invalid',
       };
     }
+  }
+
+  // ============================================
+  // FASE 6 — GESTIÓN DE TRÁMITES DE LA SESIÓN
+  // ============================================
+
+  @Get('tramites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Listar trámites habilitados en la sesión del ciudadano',
+    description: 'Retorna los trámites que el ciudadano tiene habilitados en su cuenta.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de trámites habilitados',
+    schema: {
+      example: {
+        tramites_solicitados: ['Registro de Profesionales', 'Capacitación'],
+        total: 2,
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  async obtenerTramites(@Req() req: any) {
+    return this.authService.obtenerTramites(req.user?.id);
+  }
+
+  @Post('tramites/agregar')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Agregar un trámite a la sesión del ciudadano',
+    description: 'Habilita un nuevo trámite para el ciudadano autenticado.',
+  })
+  @ApiBody({ type: AgregarTramiteDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Trámite agregado',
+    schema: {
+      example: {
+        message: 'Trámite agregado correctamente',
+        tramites_solicitados: ['Registro de Profesionales', 'Capacitacion'],
+        total: 2,
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Trámite duplicado o nombre vacío' })
+  async agregarTramite(@Req() req: any, @Body() dto: AgregarTramiteDto) {
+    return this.authService.agregarTramite(req.user?.id, dto);
+  }
+
+  @Delete('tramites/:nombre')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Quitar un trámite de la sesión del ciudadano',
+    description: 'Deshabilita un trámite previamente agregado.',
+  })
+  @ApiParam({ name: 'nombre', description: 'Nombre del trámite a quitar', example: 'Capacitación' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trámite quitado',
+    schema: {
+      example: {
+        message: 'Trámite quitado correctamente',
+        tramites_solicitados: ['Registro de Profesionales'],
+        total: 1,
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'El trámite no está habilitado' })
+  async quitarTramite(@Req() req: any, @Param('nombre') nombre: string) {
+    return this.authService.quitarTramite(req.user?.id, nombre);
   }
 }

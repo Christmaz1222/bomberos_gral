@@ -24,6 +24,7 @@ import {
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SolicitudesService } from './solicitudes.service';
+import { ComprobanteService } from '../comprobantes/comprobante.service';
 import {
   CreateSolicitudDto,
   QuerySolicitudesDto,
@@ -38,7 +39,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('solicitudes')
 @UseGuards(JwtAuthGuard)
 export class SolicitudesController {
-  constructor(private readonly solicitudesService: SolicitudesService) {}
+  constructor(
+    private readonly solicitudesService: SolicitudesService,
+    private readonly comprobanteService: ComprobanteService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -87,6 +91,26 @@ export class SolicitudesController {
   @ApiResponse({ status: 403, description: 'No autorizado' })
   async porCodigo(@Request() req, @Param('codigo') codigo: string) {
     return this.solicitudesService.porCodigo(codigo, req.user.id);
+  }
+
+  @Get(':codigo/comprobante')
+  @ApiOperation({
+    summary: 'Descargar comprobante de registro',
+    description: 'Descarga el comprobante PDF de una solicitud registrada por el usuario',
+  })
+  @ApiResponse({ status: 200, description: 'PDF del comprobante' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'No autorizado' })
+  @ApiResponse({ status: 404, description: 'Solicitud no encontrada' })
+  async descargarComprobante(
+    @Request() req,
+    @Param('codigo') codigo: string,
+    @Res() res: Response,
+  ) {
+    // Verificar que la solicitud es del usuario
+    await this.solicitudesService.porCodigo(codigo, req.user.id);
+    const pdfPath = await this.comprobanteService.obtenerComprobante(codigo);
+    res.download(pdfPath, `comprobante-${codigo}.pdf`);
   }
 
   @Post(':codigo/documentos')

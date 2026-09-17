@@ -109,6 +109,17 @@
           <span class="text-sm flex-1">Certificados</span>
         </RouterLink>
 
+        <!-- Inspecciones -->
+        <RouterLink
+          v-if="puedeVer('inspecciones')"
+          to="/admin/inspecciones"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
+          :class="isActive('/admin/inspecciones') ? 'bg-dnb-primary text-white font-semibold' : 'text-white/80 hover:bg-white/10 hover:text-white'"
+        >
+          <span class="material-symbols-outlined text-[20px]">fact_check</span>
+          <span class="text-sm flex-1">Inspecciones</span>
+        </RouterLink>
+
         <!-- Administración -->
         <div class="px-4 pt-4 pb-2">
           <span class="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Administración Sistema</span>
@@ -202,11 +213,11 @@ const rol = computed(() => usuario.value.rol || 'ADMIN')
  */
 function puedeVer(seccion) {
   const permisosPorRol = {
-    ADMIN: ['solicitudes', 'capacitaciones', 'reportes', 'certificados', 'usuarios', 'configuracion'],
-    INSPECTOR: ['solicitudes', 'reportes', 'certificados'],
+    ADMIN: ['solicitudes', 'capacitaciones', 'reportes', 'certificados', 'inspecciones', 'usuarios', 'configuracion'],
+    INSPECTOR: ['solicitudes', 'reportes', 'certificados', 'inspecciones'],
     CAJERO: ['solicitudes', 'reportes', 'certificados'],
-    SUPERVISOR: ['solicitudes', 'capacitaciones', 'reportes', 'certificados'],
-    TECNICO_VERIFICADOR: ['solicitudes', 'certificados'],
+    SUPERVISOR: ['solicitudes', 'capacitaciones', 'reportes', 'certificados', 'inspecciones'],
+    TECNICO_VERIFICADOR: ['solicitudes', 'certificados', 'inspecciones'],
   }
   return permisosPorRol[rol.value]?.includes(seccion) || false
 }

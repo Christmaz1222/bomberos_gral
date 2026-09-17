@@ -56,6 +56,14 @@ const seleccionarSeccion = (id) => {
           <span class="text-lg">🔐</span>
           Ingresar como Funcionario
         </RouterLink>
+
+        <RouterLink
+          to="/consulta"
+          class="mt-3 inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 border border-red-500 text-white text-sm font-semibold rounded-xl transition-all"
+        >
+          <span class="text-lg">🔍</span>
+          Consultar mi trámite
+        </RouterLink>
       </div>
     </div>
 

@@ -53,6 +53,26 @@
                 <span class="material-symbols-outlined text-[16px]">swap_horiz</span>
                 Cambiar Estado
               </button>
+              <button
+                @click="mostrarModalInspector = true"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
+              >
+                <span class="material-symbols-outlined text-[16px]">person_add</span>
+                Asignar Inspector
+              </button>
+              <button
+                @click="descargarComprobante"
+                :disabled="descargandoComprobante"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <span
+                  class="material-symbols-outlined text-[16px]"
+                  :class="{ 'animate-spin': descargandoComprobante }"
+                >
+                  {{ descargandoComprobante ? 'progress_activity' : 'receipt_long' }}
+                </span>
+                Comprobante
+              </button>
             </div>
             <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ solicitud.codigo }}</h1>
             <p class="text-sm text-gray-500 mt-1">
@@ -322,6 +342,13 @@
       @close="mostrarModalCambio = false"
       @cambio="onCambioEstado"
     />
+
+    <AsignarInspectorModal
+      :visible="mostrarModalInspector"
+      :codigo="codigo"
+      @close="mostrarModalInspector = false"
+      @asignado="onInspectorAsignado"
+    />
   </div>
 </template>
 
@@ -332,6 +359,7 @@ import adminService from '../../services/admin.service'
 import { useToast } from '../../composables/useToast'
 import EstadoBadge from '../../components/admin/EstadoBadge.vue'
 import CambiarEstadoModal from '../../components/admin/CambiarEstadoModal.vue'
+import AsignarInspectorModal from '../../components/admin/AsignarInspectorModal.vue'
 import RequisitosChecklist from '../../components/admin/RequisitosChecklist.vue'
 
 const route = useRoute()
@@ -340,7 +368,33 @@ const toast = useToast()
 const solicitud = ref(null)
 const cargando = ref(true)
 const mostrarModalCambio = ref(false)
+const mostrarModalInspector = ref(false)
 const descargando = ref({})
+const descargandoComprobante = ref(false)
+
+async function descargarComprobante() {
+  descargandoComprobante.value = true
+  try {
+    const response = await adminService.descargarComprobante(codigo.value)
+
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `comprobante-${codigo.value}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    toast.success('Comprobante descargado')
+  } catch (e) {
+    console.error('Error descargando comprobante:', e)
+    toast.error('No se pudo descargar el comprobante')
+  } finally {
+    descargandoComprobante.value = false
+  }
+}
 
 const codigo = computed(() => route.params.codigo)
 
@@ -410,6 +464,10 @@ onMounted(() => {
 })
 
 function onCambioEstado() {
+  cargar()
+}
+
+function onInspectorAsignado() {
   cargar()
 }
 

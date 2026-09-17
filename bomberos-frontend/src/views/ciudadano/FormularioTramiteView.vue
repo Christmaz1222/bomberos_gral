@@ -95,6 +95,7 @@ const CATALOGO = [
   { id: 7, nombre: 'Actividades Aéreas', modulo: 'TURISMO' },
   { id: 8, nombre: 'Actividades Acuáticas', modulo: 'TURISMO' },
   { id: 9, nombre: 'Actividades Terrestres', modulo: 'TURISMO' },
+  { id: 10, nombre: 'Declaración Jurada', modulo: 'SIPPCI' },
 ]
 
 async function cargar() {
