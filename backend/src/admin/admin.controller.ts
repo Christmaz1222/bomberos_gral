@@ -335,4 +335,30 @@ export class AdminController {
   async listarUsuariosInternos(@Query('rol') rol?: string) {
     return this.adminService.listarUsuariosInternos(rol);
   }
+
+  // ============================================
+  // FASE 8a: MAPA GEOGRÁFICO
+  // ============================================
+
+  @Get('mapa/solicitudes')
+  @RequirePermissions(PERMISOS.STATS_READ)
+  @ApiOperation({
+    summary: 'Datos geográficos para el mapa',
+    description: 'Agrupa solicitudes por departamento con conteos por estado y módulo.',
+  })
+  @ApiResponse({ status: 200, description: 'Datos geográficos' })
+  @ApiResponse({ status: 403, description: 'Sin permiso' })
+  async obtenerDatosMapa(
+    @Query('estado') estado?: string,
+    @Query('modulo') modulo?: string,
+    @Query('fechaDesde') fechaDesde?: string,
+    @Query('fechaHasta') fechaHasta?: string,
+  ) {
+    return this.adminService.obtenerDatosMapa({
+      estado,
+      modulo,
+      fechaDesde,
+      fechaHasta,
+    });
+  }
 }

@@ -167,6 +167,14 @@ export const adminService = {
     })
     return data
   },
+
+  /**
+   * FASE 8a: Obtiene datos geográficos para el mapa
+   */
+  async obtenerDatosMapa(params = {}) {
+    const { data } = await apiClient.get('/admin/mapa/solicitudes', { params })
+    return data
+  },
 }
 
 export default adminService

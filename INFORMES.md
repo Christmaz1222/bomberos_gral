@@ -294,6 +294,47 @@ SIPPCI V2.1 es una plataforma integral para la gestión de trámites de la Direc
 
 ---
 
+## ✨ FASE 8a — Mapa interactivo con Leaflet (COMPLETADA ✅)
+
+**Objetivo**: visualizar la distribución geográfica de solicitudes de bomberos por departamento sobre un mapa interactivo (Leaflet + OpenStreetMap), con ranking lateral y filtros por estado/módulo/fechas.
+
+**Backend — endpoints nuevos (Swagger Tag `admin`)**:
+- `GET /api/admin/mapa/solicitudes` — datos geográficos agrupados por departamento
+- Filtros por query: `estado`, `modulo`, `fechaDesde`, `fechaHasta`
+- Respuesta: `{ datos[], totales, meta }` donde cada `datos[i]` = `{ departamento, total, porEstado, porModulo, solicitudes[] }` y `totales` = `{ total_solicitudes, total_departamentos, sin_ubicacion }`
+- Fallback geográfico: `Solicitud.ubicacion` → `Empresa.departamento` → `datos_especificos[].departamento` → `"Sin especificar"` (⇒ **7 de 11 solicitudes sin departamento** = formularios legacy no capturan lat/lng aún)
+
+**Backend — archivos modificados**:
+- `src/admin/admin.service.ts` → método `obtenerDatosMapa(filtros)` (agrupación por departamento + conteos por estado/módulo + lista de solicitudes)
+- `src/admin/admin.controller.ts` → `@Get('mapa/solicitudes')` con `@RequirePermissions(PERMISOS.STATS_READ)` + Swagger
+
+**Frontend (Leaflet directo, sin vue-leaflet)**:
+- `src/main.js` → `import 'leaflet/dist/leaflet.css'`
+- `src/services/admin.service.js` → `obtenerDatosMapa(params)`
+- `src/views/admin/MapaView.vue` → mapa Leaflet + popups con estados/marcadores ESLINT, modo marcadores/círculos, ranking departamental clicable (centra el mapa), tarjetas de estadísticas, filtros
+- `src/router/index.js` → ruta `/admin/mapa` (name `AdminMapa`)
+- `src/components/admin/AdminSidebar.vue` → link "Mapa" + `puedeVer('mapa')` + `permisosPorRol` incluye mapa para ADMIN/SUPERVISOR/INSPECTOR/TECNICO_VERIFICADOR
+
+**Dependencias**: `leaflet@1.9.4` + `@types/leaflet` (dev) instaladas.
+
+### Evidencia E2E FASE 8a (verde)
+```
+F_ESTADO=OK total=8              # ?estado=APROBADO → 8 solicitudes
+F_MODULO=OK total=8              # ?modulo=SIPPCI → 8
+F_FECHAS=OK total=8              # ?fechaDesde=2026-09-01&fechaHasta=2026-09-30
+SIN_TOKEN=OK 401                 # requiere Bearer
+RBAC_CAJERO=OK 403               # cajero sin permiso STATS_READ
+SWAGGER_MAPA=False -> True       # (corregido tras añadir ApiTags/admin) — endpoint en /api/docs-json
+BACK_BUILD_EXIT=0                # nest build
+FRONT_BUILD_EXIT=0               # vite build (MapaView 12.41 kB gz 4.48 kB)
+```
+
+**RBAC**: protegido con `@RequirePermissions(PERMISOS.STATS_READ)` — acceso admin/supervisor/tecnico_verificador; cajero sin permiso → 403 (heredado de guardas de FASE 3/estadísticas).
+
+**Próximo (FASE 8b)**: geocodificación real lat/lng en formularios; mantener `datos_especificos.departamento` como fallback.
+
+---
+
 ## 📋 ROADMAP PENDIENTE
 
 ### FASE 7 — Módulo inspección
@@ -302,11 +343,18 @@ SIPPCI V2.1 es una plataforma integral para la gestión de trámites de la Direc
 - UI de inspecciones en admin
 - Integración con state machine
 
-### FASE 8 — Mapa interactivo
-- Vista `/admin/mapa`
-- Leaflet + OpenStreetMap
-- Heatmap por zona
-- Filtros por trámite/estado
+### FASE 8a — Mapa interactivo ✅ COMPLETADA
+- Vista `/admin/mapa` (Leaflet + OpenStreetMap, `MapaView.vue`)
+- `GET /api/admin/mapa/solicitudes` agrupa por **departamento** (total, porEstado, porModulo, solicitudes)
+- Filtros: estado, módulo, rango de fechas
+- Ranking departamental + clic centra el mapa
+- 2 modos de visualización: marcadores numerados ↔ círculos de área
+- RBAC: `ADMIN/SUPERVISOR/INSPECTOR/TECNICO_VERIFICADOR`; 401 sin token, 403 sin permiso
+- Swagger documentado; backlog: geocodificación real lat/lng (FASE 8b)
+
+### FASE 8b — Geocodificación (pendiente)
+- Capturar lat/lng en formularios (Leaflet picker en registro)
+- Guardar en `Solicitud.ubicacion` + geocodificar direcciones legacy
 
 ### FASE 9 — Libélula real
 - Integración real con API Libélula
@@ -382,3 +430,31 @@ SIPPCI V2.1 es una plataforma integral para la gestión de trámites de la Direc
 **Última actualización**: 17/09/2026
 **Próximo hito**: FASE 7 — Módulo inspección
 **Estado general**: ✅ Sistema funcional end-to-end
+---
+
+## FASE 8b1-mejora — Autocompletar ubicación desde el mapa (autoreverse)
+
+**Estado: COMPLETA** | Fecha: 17/09/2026
+
+### Objetivo
+Autocompletar los campos de ubicación del formulario (ciudad, departamento, provincia, municipio) y mostrar la dirección completa al marcar un punto en el mapa.
+
+### Cambios
+- `src/components/MapaSelector.vue`: al marcar el pin se hace *reverse geocoding* con Nominatim y se emite `direccion-seleccionada` con `{display_name, ciudad, departamento, provincia, municipio}`.
+- `src/views/ciudadano/formularios/FormularioProfesionalNatural.vue`: handler `@direccion-seleccionada="autocompletarDireccion"` + función que rellena los campos y el payload `ubicacion` ahora incluye `direccion` y los campos estructurados además de `lat/lng/marcado_por_usuario`.
+
+### Reglas respetadas
+- Autocompletar SIEMPRE (coherencia mapa ↔ campos); usuario puede editar después
+- Mapa opcional: submit funciona con y sin coordenadas
+- Errors de Nominatim no bloquean el submit
+- User-Agent `SIPPCI-DNB/2.1` (1 req/s, política Nominatim)
+- No se ejecutó git; no se expusieron credenciales; builds legacy intactos
+
+### Verificación
+- `vite build` (frontend): EXIT 0 | `nest build` (backend): EXIT 0
+- Marcadores idempotentes (MS_EMIT, FP_HANDLER, FP_FN, FP_PAYLOAD) = True
+
+### Pendiente siguiente
+- FASE 8b2: replicar MapaSelector + autocompletar en los otros 5 formularios del módulo 04
+- FASE 9: Libélula real
+

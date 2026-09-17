@@ -98,6 +98,16 @@
           <span class="text-sm flex-1">Reportes y Estadísticas</span>
         </RouterLink>
 
+        <RouterLink
+          v-if="puedeVer('mapa')"
+          to="/admin/mapa"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
+          :class="isActive('/admin/mapa') ? 'bg-dnb-primary text-white font-semibold' : 'text-white/80 hover:bg-white/10 hover:text-white'"
+        >
+          <span class="material-symbols-outlined text-[20px]">map</span>
+          <span class="text-sm flex-1">Mapa de Solicitudes</span>
+        </RouterLink>
+
         <!-- Certificados -->
         <RouterLink
           v-if="puedeVer('certificados')"

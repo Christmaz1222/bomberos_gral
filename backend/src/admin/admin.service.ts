@@ -1003,4 +1003,162 @@ export class AdminService {
       },
     };
   }
+
+  // ============================================
+  // FASE 8a: MAPA GEOGRÁFICO
+  // ============================================
+
+  /**
+   * FASE 8a: Obtiene datos geográficos agrupados para el mapa
+   * Agrupa solicitudes por departamento con conteos por estado/módulo
+   */
+  async obtenerDatosMapa(filtros?: {
+    estado?: string;
+    modulo?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+  }) {
+    // 1. Construir filtros
+    const where: any = {};
+
+    if (filtros?.estado) {
+      where.estado = filtros.estado;
+    }
+
+    if (filtros?.modulo) {
+      where.submodulo = {
+        modulo: { nombre: filtros.modulo },
+      };
+    }
+
+    if (filtros?.fechaDesde || filtros?.fechaHasta) {
+      where.fecha_solicitud = {};
+      if (filtros.fechaDesde) {
+        where.fecha_solicitud.gte = new Date(filtros.fechaDesde);
+      }
+      if (filtros.fechaHasta) {
+        where.fecha_solicitud.lte = new Date(filtros.fechaHasta);
+      }
+    }
+
+    // 2. Obtener todas las solicitudes con datos de ubicación
+    const solicitudes = await this.prisma.solicitud.findMany({
+      where,
+      select: {
+        id: true,
+        codigo: true,
+        estado: true,
+        tipo_persona: true,
+        fecha_solicitud: true,
+        ubicacion: true,
+        empresa: {
+          select: {
+            razon_social: true,
+            departamento: true,
+            municipio: true,
+            provincia: true,
+          },
+        },
+        submodulo: {
+          select: {
+            nombre: true,
+            modulo: { select: { nombre: true } },
+          },
+        },
+        sippci_datos: { select: { datos_especificos: true } },
+        reglamentacion_datos: { select: { datos_especificos: true } },
+        turismo_datos: { select: { datos_especificos: true } },
+        capacitacion_datos: { select: { datos_especificos: true } },
+      },
+    });
+
+    // 3. Agrupar por departamento
+    const porDepartamento = new Map<string, {
+      departamento: string;
+      total: number;
+      porEstado: Record<string, number>;
+      porModulo: Record<string, number>;
+      solicitudes: Array<{
+        id: number;
+        codigo: string;
+        estado: string;
+        municipio: string | null;
+        tipo_persona: string;
+        modulo: string;
+        submodulo: string;
+        fecha: Date;
+      }>;
+    }>();
+
+    for (const s of solicitudes) {
+      // Determinar departamento
+      let departamento = s.empresa?.departamento || null;
+
+      if (!departamento) {
+        const datos =
+          s.sippci_datos?.datos_especificos ||
+          s.reglamentacion_datos?.datos_especificos ||
+          s.turismo_datos?.datos_especificos ||
+          s.capacitacion_datos?.datos_especificos;
+        if (datos && typeof datos === 'object') {
+          departamento = (datos as any).departamento || null;
+        }
+      }
+
+      // Fallback: "Sin especificar"
+      if (!departamento) {
+        departamento = 'Sin especificar';
+      }
+
+      // Inicializar entrada
+      if (!porDepartamento.has(departamento)) {
+        porDepartamento.set(departamento, {
+          departamento,
+          total: 0,
+          porEstado: {},
+          porModulo: {},
+          solicitudes: [],
+        });
+      }
+
+      const entry = porDepartamento.get(departamento)!;
+      entry.total++;
+      entry.porEstado[s.estado] = (entry.porEstado[s.estado] || 0) + 1;
+      entry.porModulo[s.submodulo.modulo.nombre] =
+        (entry.porModulo[s.submodulo.modulo.nombre] || 0) + 1;
+
+      entry.solicitudes.push({
+        id: s.id,
+        codigo: s.codigo,
+        estado: s.estado,
+        municipio: s.empresa?.municipio || null,
+        tipo_persona: s.tipo_persona,
+        modulo: s.submodulo.modulo.nombre,
+        submodulo: s.submodulo.nombre,
+        fecha: s.fecha_solicitud,
+      });
+    }
+
+    // 4. Convertir a array ordenado por total desc
+    const datos = Array.from(porDepartamento.values()).sort(
+      (a, b) => b.total - a.total,
+    );
+
+    // 5. Estadísticas generales
+    const totales = {
+      total_solicitudes: solicitudes.length,
+      total_departamentos: datos.filter((d) => d.departamento !== 'Sin especificar').length,
+      sin_ubicacion: porDepartamento.get('Sin especificar')?.total || 0,
+    };
+
+    this.logger.log(`🗺️ Datos de mapa generados: ${totales.total_solicitudes} solicitudes`);
+
+    return {
+      datos,
+      totales,
+      meta: {
+        generadoEn: new Date().toISOString(),
+      },
+    };
+  }
 }

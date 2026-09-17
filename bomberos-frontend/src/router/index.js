@@ -273,6 +273,12 @@ const routes = [
         props: { titulo: 'Configuración SIPPCI', descripcion: 'Parámetros y configuración del sistema. Vista en construcción.' },
         meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['ADMIN'] },
       },
+      {
+        path: 'mapa',
+        name: 'AdminMapa',
+        component: () => import('../views/admin/MapaView.vue'),
+        meta: { requiresAuth: true, tipoUsuario: 'INTERNO', roles: ['INTERNO', 'ADMIN', 'SUPERVISOR', 'INSPECTOR'] },
+      },
     ],
   },
   // ⚠️ DEPRECATED: Rutas mock del flujo ciudadano antiguo

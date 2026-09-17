@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <form @submit.prevent="enviar" class="space-y-6">
-    <!-- FASE 3a — FORM-DNB-004 (legacy REGPROF-NAT) -->
-    <!-- Sección 1: Datos del Profesional Solicitante (formbns04: cedula, expedido, mail, telefono) -->
+    <!-- FASE 3a â€” FORM-DNB-004 (legacy REGPROF-NAT) -->
+    <!-- SecciÃ³n 1: Datos del Profesional Solicitante (formbns04: cedula, expedido, mail, telefono) -->
     <div class="bg-white rounded-xl shadow-sm p-5">
       <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px] text-dnb-primary">badge</span>
@@ -11,7 +11,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            Cédula de Identidad <span class="text-red-500">*</span>
+            CÃ©dula de Identidad <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.ci"
@@ -39,7 +39,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            Correo Electrónico <span class="text-red-500">*</span>
+            Correo ElectrÃ³nico <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.correo"
@@ -53,7 +53,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            Teléfono <span class="text-red-500">*</span>
+            TelÃ©fono <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.telefono"
@@ -67,11 +67,11 @@
       </div>
     </div>
 
-    <!-- Sección 2: Ubicación (formbns04: ciudad, departamento, provincia, municipio) -->
+    <!-- SecciÃ³n 2: UbicaciÃ³n (formbns04: ciudad, departamento, provincia, municipio) -->
     <div class="bg-white rounded-xl shadow-sm p-5">
       <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px] text-dnb-primary">location_on</span>
-        Ubicación
+        UbicaciÃ³n
       </h3>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -131,13 +131,26 @@
           />
         </div>
       </div>
+
+      <!-- FASE 8b1: Mapa interactivo (opcional) -->
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <MapaSelector
+          label="UbicaciÃ³n exacta en el mapa (opcional)"
+          :modelo-lat="ubicacionLat"
+          :modelo-lng="ubicacionLng"
+  @update:modelo-lat="ubicacionLat = $event"
+  @update:modelo-lng="ubicacionLng = $event"
+  @direccion-seleccionada="autocompletarDireccion"
+/>
+</div>
+
     </div>
 
-    <!-- Sección 3: Datos del Profesional (formbns04: ncprofesional, ciprofesional, carrera, educacion) -->
+    <!-- SecciÃ³n 3: Datos del Profesional (formbns04: ncprofesional, ciprofesional, carrera, educacion) -->
     <div class="bg-white rounded-xl shadow-sm p-5">
       <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px] text-dnb-primary">school</span>
-        Formación del Profesional
+        FormaciÃ³n del Profesional
       </h3>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,14 +163,14 @@
             type="text"
             maxlength="200"
             required
-            placeholder="Ej: Juan Carlos Pérez Mamani"
+            placeholder="Ej: Juan Carlos PÃ©rez Mamani"
             class="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-dnb-primary/30 transition-all"
           />
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            N° de CI del Profesional <span class="text-red-500">*</span>
+            NÂ° de CI del Profesional <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.n_ci_profesional"
@@ -185,7 +198,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            Nivel de Educación <span class="text-red-500">*</span>
+            Nivel de EducaciÃ³n <span class="text-red-500">*</span>
           </label>
           <select
             v-model="form.nivel_educacion"
@@ -199,17 +212,17 @@
       </div>
     </div>
 
-    <!-- Sección 4: Depósito Bancario (formbns04: deposito, fdeposito, docs) -->
+    <!-- SecciÃ³n 4: DepÃ³sito Bancario (formbns04: deposito, fdeposito, docs) -->
     <div class="bg-white rounded-xl shadow-sm p-5">
       <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px] text-dnb-primary">payments</span>
-        Depósito Bancario
+        DepÃ³sito Bancario
       </h3>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            N° de Depósito <span class="text-red-500">*</span>
+            NÂ° de DepÃ³sito <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.n_deposito"
@@ -223,7 +236,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            Fecha del Depósito <span class="text-red-500">*</span>
+            Fecha del DepÃ³sito <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.fecha_deposito"
@@ -235,7 +248,7 @@
 
         <div class="md:col-span-2">
           <label class="block text-xs font-semibold text-gray-700 mb-1">
-            Comprobante de Depósito <span class="text-red-500">*</span>
+            Comprobante de DepÃ³sito <span class="text-red-500">*</span>
           </label>
           <input
             ref="fileInput"
@@ -245,13 +258,13 @@
             @change="onFileChange"
             class="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dnb-primary file:text-white hover:file:bg-red-700 transition-all"
           />
-          <p class="text-[10px] text-gray-400 mt-1">JPG, PNG o PDF, máx 1 MB (legacy: imagen del comprobante)</p>
+          <p class="text-[10px] text-gray-400 mt-1">JPG, PNG o PDF, mÃ¡x 1 MB (legacy: imagen del comprobante)</p>
           <p v-if="fileError" class="text-[10px] text-red-500 mt-1">{{ fileError }}</p>
         </div>
       </div>
     </div>
 
-    <!-- Sección 5: Observaciones (formbns04: observaciones) -->
+    <!-- SecciÃ³n 5: Observaciones (formbns04: observaciones) -->
     <div class="bg-white rounded-xl shadow-sm p-5">
       <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px] text-dnb-primary">notes</span>
@@ -267,7 +280,7 @@
       <p class="text-[10px] text-gray-400 mt-1 text-right">{{ form.observaciones.length }}/500</p>
     </div>
 
-    <!-- Errores de validación -->
+    <!-- Errores de validaciÃ³n -->
     <div v-if="errores.length && intentoEnvio" class="bg-red-50 border border-red-200 rounded-lg p-4">
       <div class="flex gap-2">
         <span class="material-symbols-outlined text-red-600 text-[20px]">error</span>
@@ -303,11 +316,12 @@
 
 <script setup>
 // FASE 3a: Formulario Profesional Natural (FORM-DNB-004 / legacy REGPROF-NAT)
-// Catálogos hardcoded en el frontend (no hay tabla Catalogos en el backend) — TODO FASE 5: API catalogos
+// CatÃ¡logos hardcoded en el frontend (no hay tabla Catalogos en el backend) â€” TODO FASE 5: API catalogos
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '../../../config/api'
 import { useToast } from '../../../composables/useToast'
+import MapaSelector from '../../../components/MapaSelector.vue'
 
 const props = defineProps({
   submoduloId: { type: Number, required: true },
@@ -322,25 +336,25 @@ const enviando = ref(false)
 const intentoEnvio = ref(false)
 const fileError = ref('')
 
-/** Catálogo oficial de departamentos (legacy: tabla departamentos/sedes) */
+/** CatÃ¡logo oficial de departamentos (legacy: tabla departamentos/sedes) */
 const DEPARTAMENTOS = [
   'La Paz',
   'Santa Cruz',
   'Cochabamba',
   'Oruro',
-  'Potosí',
+  'PotosÃ­',
   'Chuquisaca',
   'Tarija',
   'Beni',
   'Pando',
 ]
 
-/** Catálogo oficial de niveles de educación (legacy: select neducacion) */
+/** CatÃ¡logo oficial de niveles de educaciÃ³n (legacy: select neducacion) */
 const NIVELES_EDUCACION = [
-  'Técnico Medio',
-  'Técnico Superior',
+  'TÃ©cnico Medio',
+  'TÃ©cnico Superior',
   'Licenciatura',
-  'Maestría',
+  'MaestrÃ­a',
   'Doctorado',
   'Otro',
 ]
@@ -366,23 +380,28 @@ const form = ref({
 
 const archivo = ref(null)
 
+// FASE 8b1: coordenadas capturadas en el mapa (opcional)
+const ubicacionLat = ref(null)
+const ubicacionLng = ref(null)
+const direccionCompleta = ref('')
+
 const errores = computed(() => {
   const errs = []
   const camposObligatorios = [
-    ['ci', 'Cédula de Identidad'],
+    ['ci', 'CÃ©dula de Identidad'],
     ['expedido', 'Expedido'],
-    ['correo', 'Correo Electrónico'],
-    ['telefono', 'Teléfono'],
+    ['correo', 'Correo ElectrÃ³nico'],
+    ['telefono', 'TelÃ©fono'],
     ['ciudad', 'Ciudad'],
     ['departamento', 'Departamento'],
     ['provincia', 'Provincia'],
     ['municipio', 'Municipio'],
     ['nombre_completo_profesional', 'Nombre Completo del Profesional'],
-    ['n_ci_profesional', 'N° CI del Profesional'],
+    ['n_ci_profesional', 'NÂ° CI del Profesional'],
     ['carrera', 'Carrera/Especialidad'],
-    ['nivel_educacion', 'Nivel de Educación'],
-    ['n_deposito', 'N° de Depósito'],
-    ['fecha_deposito', 'Fecha del Depósito'],
+    ['nivel_educacion', 'Nivel de EducaciÃ³n'],
+    ['n_deposito', 'NÂ° de DepÃ³sito'],
+    ['fecha_deposito', 'Fecha del DepÃ³sito'],
   ]
 
   camposObligatorios.forEach(([key, label]) => {
@@ -390,10 +409,10 @@ const errores = computed(() => {
   })
 
   if (form.value.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.correo.trim())) {
-    errs.push('Correo electrónico inválido')
+    errs.push('Correo electrÃ³nico invÃ¡lido')
   }
 
-  if (!archivo.value) errs.push('Comprobante de depósito es obligatorio')
+  if (!archivo.value) errs.push('Comprobante de depÃ³sito es obligatorio')
 
   return errs
 })
@@ -422,6 +441,14 @@ function onFileChange(e) {
   archivo.value = file
 }
 
+function autocompletarDireccion(direccion) {
+  if (!direccion) return
+  if (direccion.ciudad) form.value.ciudad = direccion.ciudad
+  if (direccion.departamento) form.value.departamento = direccion.departamento
+  if (direccion.provincia) form.value.provincia = direccion.provincia
+  if (direccion.municipio) form.value.municipio = direccion.municipio
+  if (direccion.display_name) direccionCompleta.value = direccion.display_name
+}
 async function enviar() {
   intentoEnvio.value = true
   if (errores.value.length > 0) {
@@ -436,37 +463,51 @@ async function enviar() {
       tipo_persona: 'NATURAL',
       empresa_id: undefined,
       datos_especificos: {
-        // Sección 1: Datos del Profesional Solicitante
+        // SecciÃ³n 1: Datos del Profesional Solicitante
         ci: form.value.ci.trim(),
         expedido: form.value.expedido,
         correo: form.value.correo.trim(),
         telefono: form.value.telefono.trim(),
-        // Sección 2: Ubicación
+        // SecciÃ³n 2: UbicaciÃ³n
         ciudad: form.value.ciudad.trim(),
         departamento: form.value.departamento,
         provincia: form.value.provincia.trim(),
         municipio: form.value.municipio.trim(),
-        // Sección 3: Formación del Profesional
+        // SecciÃ³n 3: FormaciÃ³n del Profesional
         nombre_completo_profesional: form.value.nombre_completo_profesional.trim(),
         n_ci_profesional: form.value.n_ci_profesional.trim(),
         carrera: form.value.carrera.trim(),
         nivel_educacion: form.value.nivel_educacion,
-        // Sección 4: Depósito
+        // SecciÃ³n 4: DepÃ³sito
         n_deposito: form.value.n_deposito.trim(),
         fecha_deposito: form.value.fecha_deposito,
-        // Sección 5: Observaciones (opcional)
+        // SecciÃ³n 5: Observaciones (opcional)
         observaciones: form.value.observaciones.trim(),
         // Metadata legacy: identifica el formulario fuente (formbns04)
         tipo_formulario: 'REGPROF-NAT',
         submodulo_nombre: props.submoduloNombre,
       },
       observacion: form.value.observaciones?.trim() || null,
+      // FASE 8b1: ubicaciÃ³n exacta capturada en el mapa (opcional)
+      ubicacion:
+        ubicacionLat.value && ubicacionLng.value
+          ? {
+              lat: ubicacionLat.value,
+              lng: ubicacionLng.value,
+              direccion: direccionCompleta.value || null,
+              ciudad: form.value.ciudad?.trim() || null,
+              departamento: form.value.departamento?.trim() || null,
+              provincia: form.value.provincia?.trim() || null,
+              municipio: form.value.municipio?.trim() || null,
+              marcado_por_usuario: true,
+            }
+          : null,
     }
 
     const { data } = await apiClient.post('/solicitudes', payload)
     const codigo = data.solicitud?.codigo || data.codigo
 
-    // Subir comprobante de depósito como documento (POST /solicitudes/:codigo/documentos)
+    // Subir comprobante de depÃ³sito como documento (POST /solicitudes/:codigo/documentos)
     if (archivo.value) {
       const formData = new FormData()
       formData.append('archivo', archivo.value)
@@ -486,3 +527,5 @@ async function enviar() {
   }
 }
 </script>
+
+
